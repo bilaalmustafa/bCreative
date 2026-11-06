@@ -1,0 +1,356 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Provisioned employee accounts resolve their role from users/{uid};
+    // unlike Super Admin accounts, their Firebase Auth token has no `role`
+    // claim. Always check that a claim exists before reading it: accessing a
+    // missing map field denies the entire Firestore request.
+    function hasCustomRole(role) {
+      return isSignedIn() &&
+        request.auth.token.keys().hasAll(['role']) &&
+        request.auth.token.role == role;
+    }
+
+    function isSuperAdmin() {
+      return hasCustomRole('super_admin');
+    }
+
+    function employeeAccessPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function hasEmployeeAccessRecord() {
+      return isSignedIn() && exists(employeeAccessPath());
+    }
+
+    function isEmployee() {
+      return isSignedIn() && (
+        hasCustomRole('employee') ||
+        (hasEmployeeAccessRecord() &&
+          get(employeeAccessPath()).data.role == 'employee' &&
+          get(employeeAccessPath()).data.isActive == true)
+      );
+    }
+
+    function currentEmployeeId() {
+      return hasCustomRole('employee')
+        ? (request.auth.token.keys().hasAll(['employeeId']) &&
+              request.auth.token.employeeId is string &&
+              request.auth.token.employeeId.size() > 0
+          ? request.auth.token.employeeId
+          : request.auth.uid)
+        : get(employeeAccessPath()).data.employeeId;
+    }
+
+    function isSelfEmployee(employeeId) {
+      return isEmployee() && currentEmployeeId() == employeeId;
+    }
+
+    function isAssignedTaskForCurrentEmployee(taskId) {
+      return exists(/databases/$(database)/documents/tasks/$(taskId)) &&
+        get(/databases/$(database)/documents/tasks/$(taskId)).data.employeeId ==
+          currentEmployeeId();
+    }
+
+    function isShortText(value, maxLength) {
+      return value is string && value.size() > 0 && value.size() <= maxLength;
+    }
+
+    function isOptionalText(value, maxLength) {
+      return value == null || (value is string && value.size() <= maxLength);
+    }
+
+    function isValidNewNotification() {
+      return request.resource.data.keys().hasOnly([
+          'recipientId',
+          'recipientRole',
+          'actorId',
+          'type',
+          'title',
+          'body',
+          'referenceId',
+          'isRead',
+          'createdAt',
+          'readAt',
+        ]) &&
+        isShortText(request.resource.data.recipientId, 128) &&
+        request.resource.data.recipientRole in ['employee', 'admin'] &&
+        isShortText(request.resource.data.actorId, 128) &&
+        request.resource.data.type in [
+          'task_assigned',
+          'project_assigned',
+          'payroll_paid',
+          'task_activity',
+          'task_progress',
+          'attendance_check_in',
+          'attendance_check_out',
+        ] &&
+        isShortText(request.resource.data.title, 160) &&
+        isShortText(request.resource.data.body, 600) &&
+        isShortText(request.resource.data.referenceId, 256) &&
+        request.resource.data.isRead == false &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.readAt == null;
+    }
+
+    function canReadNotification() {
+      return (isSuperAdmin() && resource.data.recipientRole == 'admin') ||
+        (isEmployee() &&
+          resource.data.recipientRole == 'employee' &&
+          resource.data.recipientId == currentEmployeeId());
+    }
+
+    function isNotificationReadStateChange() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'isRead',
+          'readAt',
+        ]) &&
+        request.resource.data.isRead is bool &&
+        ((request.resource.data.isRead == true &&
+          request.resource.data.readAt == request.time) ||
+          (request.resource.data.isRead == false &&
+            request.resource.data.readAt == null));
+    }
+
+    match /employees/{employeeId} {
+      // Employee records include private employment and payroll details.
+      allow read, write: if isSuperAdmin();
+    }
+
+    match /users/{userId} {
+      // Employee users need this small document to resolve their app role.
+      allow read: if isSuperAdmin() || (isSignedIn() && request.auth.uid == userId);
+      allow create: if isSuperAdmin() &&
+        userId == request.resource.data.employeeId &&
+        request.resource.data.keys().hasOnly([
+          'role',
+          'employeeId',
+          'email',
+          'isActive',
+          'createdAt',
+          'updatedAt',
+        ]) &&
+        request.resource.data.role == 'employee' &&
+        request.resource.data.isActive is bool &&
+        isShortText(request.resource.data.email, 254) &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time;
+      allow update, delete: if isSuperAdmin();
+    }
+
+    match /employee_profiles/{employeeId} {
+      // The employee-safe profile projection is visible only to its owner.
+      // Employees have no self-service writes on this read-only Profile page.
+      allow read: if isSuperAdmin() || isSelfEmployee(employeeId);
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    match /attendance_records/{recordId} {
+      // Admins can manage the complete register. An employee may only see
+      // their own record(s), create their one daily check-in, and complete
+      // that record with a single check-out.
+      allow read: if isSuperAdmin() || (
+        isEmployee() && resource.data.employeeId == currentEmployeeId()
+      );
+      allow create: if isSuperAdmin() || (
+        isSelfEmployee(request.resource.data.employeeId) &&
+        recordId == request.resource.data.employeeId + '-' +
+          request.resource.data.dateKey &&
+        request.resource.data.keys().hasOnly([
+          'employeeId',
+          'date',
+          'dateKey',
+          'status',
+          'checkIn',
+          'checkOut',
+          'workMinutes',
+          'createdAt',
+          'updatedAt',
+        ]) &&
+        request.resource.data.date is timestamp &&
+        isShortText(request.resource.data.dateKey, 10) &&
+        request.resource.data.status in ['present', 'late'] &&
+        request.resource.data.checkIn is timestamp &&
+        request.resource.data.checkOut == null &&
+        request.resource.data.workMinutes == 0 &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time
+      );
+      allow update: if isSuperAdmin() || (
+        isSelfEmployee(resource.data.employeeId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'checkOut',
+          'workMinutes',
+          'updatedAt',
+        ]) &&
+        resource.data.checkIn is timestamp &&
+        resource.data.checkOut == null &&
+        request.resource.data.checkOut is timestamp &&
+        request.resource.data.checkOut > resource.data.checkIn &&
+        request.resource.data.workMinutes is int &&
+        request.resource.data.workMinutes >= 0 &&
+        request.resource.data.updatedAt == request.time
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    match /payroll_records/{recordId} {
+      // Payroll is created/managed by Super Admin. An employee can read only
+      // the paid payroll records belonging to their own employee id.
+      allow read: if isSuperAdmin() || (
+        isEmployee() && resource.data.employeeId == currentEmployeeId()
+      );
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    match /projects/{projectId} {
+      // The lightweight team projection is embedded in each project, so an
+      // assigned employee can view a project without access to private
+      // employee records. The array-contains query in the app matches this
+      // predicate exactly.
+      allow read: if isSuperAdmin() || (
+        isEmployee() && currentEmployeeId() in resource.data.employeeIds
+      );
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    match /tasks/{taskId} {
+      // Employee task pages query this collection with employeeId == their
+      // own id. Allowing that predicate is required for Firestore to approve
+      // the query; write access remains limited to the narrow update rule.
+      allow read: if isSuperAdmin() || (
+        isEmployee() && resource.data.employeeId == currentEmployeeId()
+      );
+      allow create, delete: if isSuperAdmin();
+      allow update: if isSuperAdmin() || (
+        isSelfEmployee(resource.data.employeeId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'progress',
+          'updatedAt',
+        ]) &&
+        request.resource.data.status in ['assigned', 'in_progress', 'completed'] &&
+        request.resource.data.progress is int &&
+        request.resource.data.progress >= 0 &&
+        request.resource.data.progress <= 100 &&
+        (request.resource.data.status != 'assigned' ||
+          request.resource.data.progress == 0) &&
+        (request.resource.data.status != 'in_progress' ||
+          (request.resource.data.progress > 0 &&
+            request.resource.data.progress < 100)) &&
+        (request.resource.data.status != 'completed' ||
+          request.resource.data.progress == 100) &&
+        request.resource.data.updatedAt == request.time
+      );
+    }
+
+    match /task_updates/{updateId} {
+      allow read: if isSuperAdmin() || (
+        isSelfEmployee(resource.data.employeeId)
+      );
+      allow create: if isSuperAdmin() || (
+        isSelfEmployee(request.resource.data.employeeId) &&
+        isAssignedTaskForCurrentEmployee(request.resource.data.taskId) &&
+        request.resource.data.keys().hasOnly([
+          'taskId',
+          'employeeId',
+          'text',
+          'fileName',
+          'storagePath',
+          'createdAt',
+          'updatedAt',
+        ]) &&
+        isShortText(request.resource.data.taskId, 128) &&
+        isOptionalText(request.resource.data.text, 2000) &&
+        isOptionalText(request.resource.data.fileName, 255) &&
+        isOptionalText(request.resource.data.storagePath, 600) &&
+        (isShortText(request.resource.data.text, 2000) ||
+          isShortText(request.resource.data.fileName, 255)) &&
+        (request.resource.data.storagePath == null ||
+          request.resource.data.storagePath.matches(
+            '^task_attachments/' + currentEmployeeId() + '/' +
+            request.resource.data.taskId + '/' + updateId + '/.*'
+          )) &&
+        request.resource.data.createdAt == request.time &&
+        request.resource.data.updatedAt == request.time
+      );
+      allow update: if isSuperAdmin() || (
+        isSelfEmployee(resource.data.employeeId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'text',
+          'updatedAt',
+        ]) &&
+        isOptionalText(request.resource.data.text, 2000) &&
+        (isShortText(request.resource.data.text, 2000) ||
+          isShortText(resource.data.fileName, 255)) &&
+        request.resource.data.updatedAt == request.time
+      );
+      allow delete: if isSuperAdmin() || isSelfEmployee(resource.data.employeeId);
+    }
+
+    match /notifications/{notificationId} {
+      // Employee notices are private. Super Admin notices are shared only
+      // among Super Admin users, which lets every administrator see employee
+      // attendance and task activity in real time.
+      allow read: if canReadNotification();
+
+      // Admins can notify employees about assignments and paid payroll.
+      // Employees can notify Super Admins only about their own work activity
+      // and attendance events.
+      allow create: if isValidNewNotification() && (
+        (isSuperAdmin() &&
+          request.resource.data.recipientRole == 'employee' &&
+          request.resource.data.actorId == request.auth.uid &&
+          request.resource.data.type in [
+            'task_assigned',
+            'project_assigned',
+            'payroll_paid',
+          ]) ||
+        (isEmployee() &&
+          request.resource.data.recipientRole == 'admin' &&
+          request.resource.data.recipientId == 'super_admin' &&
+          request.resource.data.actorId == request.auth.uid &&
+          request.resource.data.type in [
+            'task_activity',
+            'task_progress',
+            'attendance_check_in',
+            'attendance_check_out',
+          ])
+      );
+
+      allow update: if canReadNotification() && isNotificationReadStateChange();
+      allow delete: if false;
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if isSuperAdmin();
+      // Only Super Admin initiated employee record changes are logged.
+      allow create: if isSuperAdmin() &&
+        request.resource.data.keys().hasOnly([
+          'action',
+          'actorUid',
+          'employeeId',
+          'createdAt',
+        ]) &&
+        request.resource.data.action in [
+          'employee_created',
+          'employee_updated',
+          'employee_deactivated',
+          'employee_reactivated',
+        ] &&
+        request.resource.data.actorUid == request.auth.uid &&
+        request.resource.data.employeeId is string &&
+        request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    // Modules not yet implemented in this repository remain explicitly denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,60 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    // Employees created by this app use users/{uid} for their role, so their
+    // Auth token does not contain a `role` claim. Guard optional claims before
+    // accessing them or Storage will reject the request.
+    function hasCustomRole(role) {
+      return signedIn() &&
+        request.auth.token.keys().hasAll(['role']) &&
+        request.auth.token.role == role;
+    }
+
+    function admin() { return hasCustomRole('super_admin'); }
+
+    function employeeAccessPath() {
+      return /databases/(default)/documents/users/$(request.auth.uid);
+    }
+
+    function owner(employeeId) {
+      return signedIn() && (
+        (hasCustomRole('employee') &&
+          request.auth.token.keys().hasAll(['employeeId']) &&
+          request.auth.token.employeeId == employeeId) ||
+        (firestore.exists(employeeAccessPath()) &&
+          firestore.get(employeeAccessPath()).data.role == 'employee' &&
+          firestore.get(employeeAccessPath()).data.isActive == true &&
+          firestore.get(employeeAccessPath()).data.employeeId == employeeId)
+      );
+    }
+    function assignedTaskOwner(employeeId, taskId) {
+      return owner(employeeId) &&
+        firestore.exists(/databases/(default)/documents/tasks/$(taskId)) &&
+        firestore.get(/databases/(default)/documents/tasks/$(taskId)).data.employeeId == employeeId;
+    }
+    match /task_attachments/{employeeId}/{taskId}/{updateId}/{fileName} {
+      allow read, delete: if admin() || assignedTaskOwner(employeeId, taskId);
+      allow create: if admin() || (assignedTaskOwner(employeeId, taskId) &&
+        request.resource.size <= 10 * 1024 * 1024 &&
+        request.resource.contentType.matches('application/pdf|text/plain|image/png|image/jpeg'));
+      allow update: if false;
+    }
+    match /employee_photos/{employeeId}/{fileName} {
+      allow read: if admin() || owner(employeeId);
+      allow create, update: if admin() &&
+        request.resource.size <= 2 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/png|image/jpeg');
+      allow delete: if admin();
+    }
+    match /payroll_slips/{employeeId}/{periodKey}/{recordId}/{fileName} {
+      // A salary slip is visible only to its employee and administrators.
+      allow read: if admin() || owner(employeeId);
+      allow delete: if admin();
+      allow create: if admin() &&
+        request.resource.size <= 10 * 1024 * 1024 &&
+        request.resource.contentType.matches('application/pdf|image/png|image/jpeg');
+      allow update: if false;
+    }
+  }
+}
