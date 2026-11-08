@@ -484,11 +484,24 @@ class _ProjectDirectory extends StatelessWidget {
   }
 }
 
-class _ProjectsTable extends StatelessWidget {
+class _ProjectsTable extends StatefulWidget {
   const _ProjectsTable({required this.controller, required this.projects});
 
   final ProjectController controller;
   final List<ProjectModel> projects;
+
+  @override
+  State<_ProjectsTable> createState() => _ProjectsTableState();
+}
+
+class _ProjectsTableState extends State<_ProjectsTable> {
+  final ScrollController _horizontalScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _horizontalScrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -507,7 +520,9 @@ class _ProjectsTable extends StatelessWidget {
           },
         ),
         child: Scrollbar(
+          controller: _horizontalScrollController,
           child: SingleChildScrollView(
+            controller: _horizontalScrollController,
             scrollDirection: Axis.horizontal,
             primary: false,
             child: SizedBox(
@@ -515,9 +530,9 @@ class _ProjectsTable extends StatelessWidget {
               child: Column(
                 children: [
                   const _ProjectTableHeader(),
-                  ...projects.map(
+                  ...widget.projects.map(
                     (project) => _ProjectTableRow(
-                      controller: controller,
+                      controller: widget.controller,
                       project: project,
                     ),
                   ),

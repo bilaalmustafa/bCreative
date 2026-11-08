@@ -23,14 +23,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/users/$(request.auth.uid);
     }
 
-    function hasEmployeeAccessRecord() {
-      return isSignedIn() && exists(employeeAccessPath());
-    }
-
     function isEmployee() {
       return isSignedIn() && (
         hasCustomRole('employee') ||
-        (hasEmployeeAccessRecord() &&
+        (exists(employeeAccessPath()) &&
           get(employeeAccessPath()).data.role == 'employee' &&
           get(employeeAccessPath()).data.isActive == true)
       );
@@ -48,6 +44,17 @@ service cloud.firestore {
 
     function isSelfEmployee(employeeId) {
       return isEmployee() && currentEmployeeId() == employeeId;
+    }
+
+    // A dashboard checks the deterministic record for today before an
+    // employee has checked in. Firestore has no resource data for a missing
+    // document, so the normal owner check cannot be evaluated in that case.
+    // Permit only the current employee's expected yyyy-mm-dd record id; an
+    // existing document still has to pass the data-based ownership check.
+    function isOwnAttendanceRecordId(recordId) {
+      return recordId.matches(
+        '^' + currentEmployeeId() + '-[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+      );
     }
 
     function isAssignedTaskForCurrentEmployee(taskId) {
@@ -153,7 +160,14 @@ service cloud.firestore {
       // Admins can manage the complete register. An employee may only see
       // their own record(s), create their one daily check-in, and complete
       // that record with a single check-out.
-      allow read: if isSuperAdmin() || (
+      allow get: if isSuperAdmin() || (
+        isEmployee() && (
+          (resource == null && isOwnAttendanceRecordId(recordId)) ||
+          (resource != null &&
+            resource.data.employeeId == currentEmployeeId())
+        )
+      );
+      allow list: if isSuperAdmin() || (
         isEmployee() && resource.data.employeeId == currentEmployeeId()
       );
       allow create: if isSuperAdmin() || (

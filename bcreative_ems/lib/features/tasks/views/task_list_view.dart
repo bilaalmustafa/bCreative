@@ -1309,7 +1309,7 @@ class _EmployeeTaskContent extends StatelessWidget {
     children: [
       Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1000),
+          constraints: const BoxConstraints(maxWidth: 1500),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1358,11 +1358,9 @@ class _EmployeeTaskStats extends StatelessWidget {
   const _EmployeeTaskStats({required this.controller});
   final TaskController controller;
   @override
-  Widget build(BuildContext context) => Obx(
-    () => Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: [
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => Obx(() {
+      final cards = [
         _MiniTaskStat(
           label: 'Pending',
           value: '${controller.pendingTasks}',
@@ -1383,8 +1381,29 @@ class _EmployeeTaskStats extends StatelessWidget {
           value: '${controller.overdueTasks}',
           color: const Color(0xFFE65050),
         ),
-      ],
-    ),
+      ];
+
+      if (constraints.maxWidth >= 900) {
+        return Row(
+          children: [
+            for (var index = 0; index < cards.length; index++) ...[
+              Expanded(child: cards[index]),
+              if (index != cards.length - 1) const SizedBox(width: 12),
+            ],
+          ],
+        );
+      }
+
+      return GridView.count(
+        crossAxisCount: constraints.maxWidth >= 480 ? 2 : 1,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: constraints.maxWidth >= 480 ? 3.1 : 4.1,
+        children: cards,
+      );
+    }),
   );
 }
 
@@ -1398,52 +1417,49 @@ class _MiniTaskStat extends StatelessWidget {
   final String value;
   final Color color;
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 165,
-    child: _TaskSurface(
-      padding: const EdgeInsets.all(14),
-      child: Row(
-        children: [
-          Container(
-            height: 36,
-            width: 36,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: .13),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(Icons.task_alt_rounded, color: color, size: 20),
+  Widget build(BuildContext context) => _TaskSurface(
+    padding: const EdgeInsets.all(14),
+    child: Row(
+      children: [
+        Container(
+          height: 36,
+          width: 36,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: .13),
+            borderRadius: BorderRadius.circular(10),
           ),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+          child: Icon(Icons.task_alt_rounded, color: color, size: 20),
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10,
+                  color: Color(0xFF60749A),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value,
                   style: const TextStyle(
-                    fontSize: 10,
-                    color: Color(0xFF60749A),
-                    fontWeight: FontWeight.w700,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    value,
-                    style: const TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     ),
   );
 }

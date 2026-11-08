@@ -110,8 +110,11 @@ class AttendanceRepository {
   }
 
   /// Creates the one allowed attendance document for an employee's local day.
-  /// The fixed document id, transaction, and Firestore rules together prevent
-  /// a second check-in from replacing the first one.
+  /// The fixed document id and Firestore rules prevent a second check-in from
+  /// replacing the first one.  This deliberately uses ordinary document
+  /// operations instead of a client transaction: the transaction's extra
+  /// read/write retry cycle was a fragile point on employee web sessions, and
+  /// the rule already rejects a second full-document write as an update.
   Future<void> checkIn({
     required String employeeId,
     required String employeeName,
@@ -120,39 +123,30 @@ class AttendanceRepository {
     final actorUid = _requireActorUid();
     final date = DateTime(at.year, at.month, at.day);
     final reference = _records.doc('$employeeId-${_dateKey(date)}');
-    final notification = _notifications.newDocument();
-    await _firestore.runTransaction((transaction) async {
-      final existing = await transaction.get(reference);
-      if (existing.exists) {
-        throw StateError('You have already checked in for today.');
-      }
-      final status = _isLate(at)
-          ? AttendanceStatus.late
-          : AttendanceStatus.present;
-      transaction.set(
-        reference,
-        AttendanceRecordModel(
-          id: reference.id,
-          employeeId: employeeId,
-          date: date,
-          status: status,
-          checkIn: at,
-        ).toJson(includeCreatedAt: true),
-      );
-      transaction.set(
-        notification,
-        _notifications
-            .adminNotification(
-              id: notification.id,
-              actorId: actorUid,
-              type: AppNotificationType.attendanceCheckIn,
-              title: '${_displayName(employeeName)} checked in',
-              body: 'A check-in was recorded for today.',
-              referenceId: reference.id,
-            )
-            .toJson(),
-      );
-    });
+    final existing = await reference.get();
+    if (existing.exists) {
+      throw StateError('You have already checked in for today.');
+    }
+
+    final status = _isLate(at)
+        ? AttendanceStatus.late
+        : AttendanceStatus.present;
+    await reference.set(
+      AttendanceRecordModel(
+        id: reference.id,
+        employeeId: employeeId,
+        date: date,
+        status: status,
+        checkIn: at,
+      ).toJson(includeCreatedAt: true),
+    );
+    await _notifyAdmins(
+      actorUid: actorUid,
+      type: AppNotificationType.attendanceCheckIn,
+      title: '${_displayName(employeeName)} checked in',
+      body: 'A check-in was recorded for today.',
+      referenceId: reference.id,
+    );
   }
 
   /// Completes today's existing record once. The check-in timestamp is kept
@@ -165,38 +159,59 @@ class AttendanceRepository {
     final actorUid = _requireActorUid();
     final date = DateTime(at.year, at.month, at.day);
     final reference = _records.doc('$employeeId-${_dateKey(date)}');
-    final notification = _notifications.newDocument();
-    await _firestore.runTransaction((transaction) async {
-      final snapshot = await transaction.get(reference);
-      if (!snapshot.exists) {
-        throw StateError('Check in before checking out.');
-      }
-      final record = AttendanceRecordModel.fromFirestore(snapshot);
-      if (record.checkOut != null) {
-        throw StateError('You have already checked out for today.');
-      }
-      if (record.checkIn == null || !at.isAfter(record.checkIn!)) {
-        throw StateError('Check-out time must be after check-in.');
-      }
-      transaction.update(reference, {
-        'checkOut': Timestamp.fromDate(at),
-        'workMinutes': at.difference(record.checkIn!).inMinutes,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      transaction.set(
-        notification,
+    final snapshot = await reference.get();
+    if (!snapshot.exists) {
+      throw StateError('Check in before checking out.');
+    }
+    final record = AttendanceRecordModel.fromFirestore(snapshot);
+    if (record.checkOut != null) {
+      throw StateError('You have already checked out for today.');
+    }
+    if (record.checkIn == null || !at.isAfter(record.checkIn!)) {
+      throw StateError('Check-out time must be after check-in.');
+    }
+    await reference.update({
+      'checkOut': Timestamp.fromDate(at),
+      'workMinutes': at.difference(record.checkIn!).inMinutes,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    await _notifyAdmins(
+      actorUid: actorUid,
+      type: AppNotificationType.attendanceCheckOut,
+      title: '${_displayName(employeeName)} checked out',
+      body: 'Today\'s attendance record has been completed.',
+      referenceId: reference.id,
+    );
+  }
+
+  /// Attendance is the primary action. A notification must never roll back a
+  /// valid check-in or check-out if notification permissions or connectivity
+  /// are temporarily unavailable.
+  Future<void> _notifyAdmins({
+    required String actorUid,
+    required AppNotificationType type,
+    required String title,
+    required String body,
+    required String referenceId,
+  }) async {
+    try {
+      final notification = _notifications.newDocument();
+      await notification.set(
         _notifications
             .adminNotification(
               id: notification.id,
               actorId: actorUid,
-              type: AppNotificationType.attendanceCheckOut,
-              title: '${_displayName(employeeName)} checked out',
-              body: 'Today\'s attendance record has been completed.',
-              referenceId: reference.id,
+              type: type,
+              title: title,
+              body: body,
+              referenceId: referenceId,
             )
             .toJson(),
       );
-    });
+    } catch (_) {
+      // The check-in/out was already committed. Keep it successful even when
+      // the optional admin notification cannot be delivered.
+    }
   }
 
   String _requireActorUid() {

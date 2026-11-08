@@ -44,30 +44,28 @@ class _BrandPanel extends StatelessWidget {
           colors: [AppColors.primary, AppColors.primaryLight],
         ),
       ),
-      child: const Center(
+      child: Center(
         child: Padding(
           padding: EdgeInsets.all(48),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(
-                Icons.business_center_rounded,
-                size: 48,
-                color: Colors.white,
-              ),
-              SizedBox(height: 24),
-              Text(
-                'BCreative EMS',
+              const _LoginBrandLogo(size: 350),
+              const SizedBox(height: 8),
+              const Text(
+                'B-Creative EMS',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 12),
-              Text(
+              const SizedBox(height: 12),
+              const Text(
                 'Employee Management System\nSecure access for your organization.',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white70,
                   fontSize: 16,
@@ -75,6 +73,39 @@ class _BrandPanel extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LoginBrandLogo extends StatelessWidget {
+  const _LoginBrandLogo({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    // The transparent source has generous clear padding. Cropping only that
+    // padding keeps the enlarged artwork close to the text below it.
+    return SizedBox(
+      width: size,
+      height: size * .62,
+      child: ClipRect(
+        child: OverflowBox(
+          minWidth: size,
+          maxWidth: size,
+          minHeight: size,
+          maxHeight: size,
+          alignment: Alignment.center,
+          child: Image.asset(
+            'assets/branding/bcreative_logo_white.png',
+            width: size,
+            height: size,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
+            semanticLabel: 'BCreative',
           ),
         ),
       ),
@@ -92,10 +123,20 @@ class _LoginForm extends GetView<LoginController> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (!isDesktop(context)) ...[
-            Icon(
-              Icons.business_center_rounded,
-              size: 40,
-              color: theme.colorScheme.primary,
+            Container(
+              height: 64,
+              width: 64,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Image.asset(
+                'assets/branding/bcreative_logo_white.png',
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+                semanticLabel: 'BCreative',
+              ),
             ),
             const SizedBox(height: 16),
           ],

@@ -42,7 +42,20 @@ class EmployeeAttendanceController extends GetxController {
   StreamSubscription<List<AttendanceRecordModel>>? _recentSubscription;
   StreamSubscription<List<AttendanceRecordModel>>? _monthlySubscription;
 
-  String get employeeId => _authController.session.value?.employeeId ?? '';
+  String get employeeId {
+    final session = _authController.session.value;
+    if (session == null) return '';
+    // Employee accounts created by older app versions can have a valid Auth
+    // uid while their employeeId field is absent.  Employee documents use the
+    // uid as their id, so the fallback keeps the dashboard and attendance
+    // controls available instead of silently starting with an empty id.
+    final configuredEmployeeId = session.employeeId;
+    return (configuredEmployeeId != null && configuredEmployeeId.isNotEmpty
+            ? configuredEmployeeId
+            : session.uid)
+        .trim();
+  }
+
   bool get canCheckIn => todayRecord.value == null;
   bool get canCheckOut =>
       todayRecord.value?.checkIn != null && todayRecord.value?.checkOut == null;

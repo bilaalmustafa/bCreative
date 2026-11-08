@@ -111,7 +111,7 @@ class _SalarySummary extends StatelessWidget {
         icon: Icons.receipt_long_rounded,
         label: 'Paid Records',
         value: '${controller.filteredRecords.length}',
-        caption: controller.selectedMonthLabel,
+
         color: const Color(0xFF9146F5),
         background: const Color(0xFFF1E6FF),
       ),
@@ -119,9 +119,6 @@ class _SalarySummary extends StatelessWidget {
         icon: Icons.payments_rounded,
         label: 'Net Salary',
         value: _money(controller.totalPaid),
-        caption: controller.selectedMonth.value == null
-            ? 'All displayed months'
-            : 'Selected month',
         color: const Color(0xFF10B979),
         background: const Color(0xFFE0F9EE),
       ),
@@ -129,7 +126,6 @@ class _SalarySummary extends StatelessWidget {
         icon: Icons.description_outlined,
         label: 'Salary Slips',
         value: '${controller.slipCount}',
-        caption: 'Available to preview',
         color: const Color(0xFFFF8616),
         background: const Color(0xFFFFECDC),
       ),
@@ -165,14 +161,14 @@ class _SalaryMetric extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
-    required this.caption,
+    this.caption,
     required this.color,
     required this.background,
   });
   final IconData icon;
   final String label;
   final String value;
-  final String caption;
+  final String? caption;
   final Color color;
   final Color background;
 
@@ -215,13 +211,18 @@ class _SalaryMetric extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                caption,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 10, color: Color(0xFF7185A9)),
-              ),
+              if (caption?.isNotEmpty == true) ...[
+                const SizedBox(height: 2),
+                Text(
+                  caption!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFF7185A9),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -237,59 +238,54 @@ class _SalaryMonthFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = Obx(
-      () => Wrap(
-        alignment: WrapAlignment.start,
-        crossAxisAlignment: WrapCrossAlignment.end,
-        spacing: 10,
-        runSpacing: 10,
-        children: [
-          SizedBox(
-            width: 240,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Salary Month', style: _salaryFieldLabel),
-                const SizedBox(height: 5),
-                Container(
-                  height: 40,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: _salaryFieldDecoration,
-                  child: Row(
-                    children: [
-                      IconButton(
-                        onPressed: controller.previousMonth,
-                        tooltip: 'Previous month',
-                        icon: const Icon(Icons.chevron_left_rounded),
-                      ),
-                      Expanded(
-                        child: Text(
-                          controller.selectedMonthLabel,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
+    final content = LayoutBuilder(
+      builder: (context, constraints) => Obx(() {
+        final width =
+            constraints.maxWidth.isFinite && constraints.maxWidth < 240
+            ? constraints.maxWidth
+            : 240.0;
+        return SizedBox(
+          width: width,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Salary Month', style: _salaryFieldLabel),
+              const SizedBox(height: 5),
+              Container(
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: _salaryFieldDecoration,
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: controller.previousMonth,
+                      tooltip: 'Previous month',
+                      icon: const Icon(Icons.chevron_left_rounded),
+                    ),
+                    Expanded(
+                      child: Text(
+                        controller.selectedMonthLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      IconButton(
-                        onPressed: controller.nextMonth,
-                        tooltip: 'Next month',
-                        icon: const Icon(Icons.chevron_right_rounded),
-                      ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      onPressed: controller.nextMonth,
+                      tooltip: 'Next month',
+                      icon: const Icon(Icons.chevron_right_rounded),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          OutlinedButton.icon(
-            onPressed: controller.showAllMonths,
-            icon: const Icon(Icons.calendar_month_outlined, size: 18),
-            label: const Text('All Months'),
-          ),
-        ],
-      ),
+        );
+      }),
     );
     if (embedded) {
       return Padding(padding: const EdgeInsets.all(12), child: content);

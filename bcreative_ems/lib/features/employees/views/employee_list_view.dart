@@ -1250,10 +1250,23 @@ class _PersonalTab extends StatelessWidget {
           const _FieldLabel('Temporary Password *'),
           TextFormField(
             controller: formController.temporaryPasswordController,
-            obscureText: true,
+            obscureText: formController.obscureTemporaryPassword.value,
             readOnly: readOnly,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: 'Set a secure temporary password',
+              suffixIcon: IconButton(
+                tooltip: formController.obscureTemporaryPassword.value
+                    ? 'Show password'
+                    : 'Hide password',
+                onPressed: readOnly
+                    ? null
+                    : formController.toggleTemporaryPasswordVisibility,
+                icon: Icon(
+                  formController.obscureTemporaryPassword.value
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                ),
+              ),
             ),
             validator: readOnly
                 ? null

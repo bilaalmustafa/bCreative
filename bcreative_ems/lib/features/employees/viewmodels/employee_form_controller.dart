@@ -15,6 +15,7 @@ class EmployeeFormController extends GetxController {
   final formKey = GlobalKey<FormState>();
   final RxBool isLoading = false.obs;
   final RxBool isEditMode = false.obs;
+  final RxBool obscureTemporaryPassword = true.obs;
   String? _employeeId;
 
   final fullNameController = TextEditingController();
@@ -246,9 +247,14 @@ class EmployeeFormController extends GetxController {
 
   void clearProfilePhoto() => profilePhoto.value = null;
 
+  void toggleTemporaryPasswordVisibility() {
+    obscureTemporaryPassword.value = !obscureTemporaryPassword.value;
+  }
+
   void resetForCreate() {
     _employeeId = null;
     isEditMode.value = false;
+    obscureTemporaryPassword.value = true;
     // Keep the mounted Form intact; clear its controller-backed values below.
     fullNameController.clear();
     emailController.clear();

@@ -59,7 +59,7 @@ class _EmployeeProjectHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const PageIntro(
     icon: Icons.folder_copy_rounded,
-    description: 'View projects and the tasks assigned to you.',
+    description: 'View your project schedule, team, and assigned tasks.',
   );
 }
 
@@ -703,6 +703,45 @@ class _EmployeeProjectDetails extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
+                _EmployeeProjectDetailLine(
+                  icon: Icons.business_outlined,
+                  label: 'Department',
+                  value: project.department.isEmpty ? '—' : project.department,
+                ),
+                _EmployeeProjectDetailLine(
+                  icon: Icons.flag_outlined,
+                  label: 'Priority',
+                  value: project.priority.label,
+                ),
+                _EmployeeProjectDetailLine(
+                  icon: Icons.calendar_today_outlined,
+                  label: 'Start date',
+                  value: _employeeProjectDate(project.startDate),
+                ),
+                _EmployeeProjectDetailLine(
+                  icon: Icons.event_outlined,
+                  label: 'Deadline',
+                  value: _employeeProjectDate(project.endDate),
+                ),
+                const SizedBox(height: 15),
+                const Text(
+                  'Assigned Team',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 8),
+                if (project.teamMembers.isEmpty)
+                  const Text(
+                    'No team members assigned.',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF60749A)),
+                  )
+                else
+                  ...project.teamMembers.map(
+                    (member) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _EmployeeProjectTeamMember(member: member),
+                    ),
+                  ),
+                const SizedBox(height: 8),
                 const Text(
                   'My Tasks',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
@@ -733,6 +772,104 @@ class _EmployeeProjectDetails extends StatelessWidget {
       );
     }),
   );
+}
+
+class _EmployeeProjectDetailLine extends StatelessWidget {
+  const _EmployeeProjectDetailLine({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 17, color: const Color(0xFF60749A)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 11, color: Color(0xFF60749A)),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _EmployeeProjectTeamMember extends StatelessWidget {
+  const _EmployeeProjectTeamMember({required this.member});
+
+  final ProjectTeamMember member;
+
+  @override
+  Widget build(BuildContext context) {
+    final photoUrl = member.profilePhotoUrl;
+    final role = member.jobTitle?.trim().isNotEmpty == true
+        ? member.jobTitle!
+        : member.department?.trim().isNotEmpty == true
+        ? member.department!
+        : 'Employee';
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 15,
+          backgroundColor: const Color(0xFFE8F0FF),
+          foregroundImage: photoUrl?.isNotEmpty == true
+              ? NetworkImage(photoUrl!)
+              : null,
+          child: Text(
+            _employeeInitials(member.name),
+            style: const TextStyle(
+              fontSize: 9,
+              color: Color(0xFF2468F2),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                member.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                role,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 10, color: Color(0xFF7185A8)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _EmployeeTaskTile extends StatelessWidget {
@@ -797,6 +934,18 @@ class _EmployeeTaskTile extends StatelessWidget {
       ),
     );
   }
+}
+
+String _employeeProjectDate(DateTime? date) =>
+    date == null ? '—' : DateFormat('dd MMM yyyy').format(date);
+
+String _employeeInitials(String name) {
+  final words = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((word) => word.isNotEmpty);
+  final initials = words.take(2).map((word) => word[0].toUpperCase()).join();
+  return initials.isEmpty ? '?' : initials;
 }
 
 class _EmployeeSurface extends StatelessWidget {

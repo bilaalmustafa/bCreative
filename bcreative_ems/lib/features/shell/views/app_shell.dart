@@ -1,8 +1,11 @@
+import 'package:bcreative_ems/app/constants/roles.dart';
 import 'package:bcreative_ems/app/routes/app_routes.dart';
 import 'package:bcreative_ems/core/utils/responsive.dart';
 import 'package:bcreative_ems/features/auth/viewmodels/auth_controller.dart';
 import 'package:bcreative_ems/features/notifications/models/app_notification_model.dart';
 import 'package:bcreative_ems/features/notifications/viewmodels/notification_controller.dart';
+import 'package:bcreative_ems/features/profile/models/employee_profile_model.dart';
+import 'package:bcreative_ems/features/profile/repositories/employee_profile_repository.dart';
 import 'package:bcreative_ems/features/shell/viewmodels/shell_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -419,88 +422,118 @@ String _notificationTime(DateTime? value) {
 }
 
 class _UserMenu extends StatelessWidget {
-  const _UserMenu({required this.auth, this.compact = false});
+  _UserMenu({required this.auth, this.compact = false});
 
   final AuthController auth;
   final bool compact;
+  final EmployeeProfileRepository _profileRepository =
+      EmployeeProfileRepository();
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final email = auth.session.value?.email ?? '';
-      final name = _nameFromEmail(email);
-      return PopupMenuButton<String>(
-        tooltip: 'Account menu',
-        offset: const Offset(0, 50),
-        onSelected: (value) {
-          if (value == 'logout') auth.signOut();
+      final session = auth.session.value;
+      final email = session?.email?.trim() ?? '';
+      final employeeId = session?.employeeId?.trim().isNotEmpty == true
+          ? session!.employeeId!.trim()
+          : session?.uid ?? '';
+
+      if (session?.role != UserRole.employee || employeeId.isEmpty) {
+        return _menuFor(name: 'Admin', email: email, photoUrl: null);
+      }
+
+      return StreamBuilder<EmployeeProfileModel?>(
+        stream: _profileRepository.watchProfile(employeeId),
+        builder: (context, snapshot) {
+          final profile = snapshot.data;
+          final profileName = profile?.fullName.trim();
+          final profileEmail = profile?.email.trim();
+          return _menuFor(
+            name: profileName?.isNotEmpty == true
+                ? profileName!
+                : _nameFromEmail(email),
+            email: profileEmail?.isNotEmpty == true ? profileEmail! : email,
+            photoUrl: profile?.displayPhotoUrl,
+          );
         },
-        itemBuilder: (_) => [
-          PopupMenuItem(
-            enabled: false,
-            child: SizedBox(
-              width: 180,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(email, style: const TextStyle(fontSize: 12)),
-                ],
-              ),
+      );
+    });
+  }
+
+  Widget _menuFor({
+    required String name,
+    required String email,
+    required String? photoUrl,
+  }) {
+    return PopupMenuButton<String>(
+      tooltip: 'Account menu',
+      offset: const Offset(0, 50),
+      onSelected: (value) {
+        if (value == 'logout') auth.signOut();
+      },
+      itemBuilder: (_) => [
+        PopupMenuItem(
+          enabled: false,
+          child: SizedBox(
+            width: 180,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 3),
+                Text(email, style: const TextStyle(fontSize: 12)),
+              ],
             ),
           ),
-          const PopupMenuDivider(),
-          const PopupMenuItem(value: 'logout', child: Text('Sign out')),
-        ],
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 7),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: const Color(0xFFE7EEFF),
-                child: Text(
-                  _initials(name),
-                  style: const TextStyle(
-                    color: Color(0xFF336BE9),
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              if (!compact) ...[
-                const SizedBox(width: 10),
-                Column(
+        ),
+        const PopupMenuDivider(),
+        const PopupMenuItem(value: 'logout', child: Text('Sign out')),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _AccountAvatar(name: name, photoUrl: photoUrl),
+            if (!compact) ...[
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 168,
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const Text(
-                      'Super Admin',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF6C80A4)),
+                    const SizedBox(height: 2),
+                    Text(
+                      email.isEmpty ? 'No email address' : email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF6C80A4),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: Color(0xFF5B7199),
-                ),
-              ],
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: Color(0xFF5B7199),
+              ),
             ],
-          ),
+          ],
         ),
-      );
-    });
+      ),
+    );
   }
 
   String _nameFromEmail(String email) {
@@ -516,9 +549,35 @@ class _UserMenu extends StatelessWidget {
         .map((item) => '${item[0].toUpperCase()}${item.substring(1)}')
         .join(' ');
   }
+}
 
-  String _initials(String name) {
-    final pieces = name.split(' ').where((item) => item.isNotEmpty).take(2);
+class _AccountAvatar extends StatelessWidget {
+  const _AccountAvatar({required this.name, required this.photoUrl});
+
+  final String name;
+  final String? photoUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhoto = photoUrl?.isNotEmpty == true;
+    return CircleAvatar(
+      radius: 20,
+      backgroundColor: const Color(0xFFE7EEFF),
+      foregroundImage: hasPhoto ? NetworkImage(photoUrl!) : null,
+      child: hasPhoto
+          ? null
+          : Text(
+              _initials(name),
+              style: const TextStyle(
+                color: Color(0xFF336BE9),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+    );
+  }
+
+  String _initials(String value) {
+    final pieces = value.split(' ').where((item) => item.isNotEmpty).take(2);
     final initials = pieces.map((item) => item[0]).join();
     return initials.isEmpty ? 'A' : initials;
   }
@@ -620,14 +679,14 @@ class _SideBar extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'BCreative',
+                                  'B-Creative',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
                                 Text(
-                                  'EMS · Version 1.0.0',
+                                  'EMS · Version 1.0.1',
                                   style: TextStyle(
                                     color: Color(0xFF94A7C8),
                                     fontSize: 11,
@@ -655,39 +714,15 @@ class _BrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = small ? 28.0 : 44.0;
-    return Container(
+    final size = small ? 30.0 : 80.0;
+    return SizedBox(
       height: size,
       width: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(small ? 8 : 13),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2D7FFF), Color(0xFF594CFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Icon(
-            Icons.auto_awesome_mosaic_rounded,
-            color: Colors.white,
-            size: small ? 17 : 28,
-          ),
-          Positioned(
-            right: small ? 3 : 5,
-            bottom: small ? 3 : 5,
-            child: Container(
-              height: small ? 5 : 8,
-              width: small ? 5 : 8,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFD544),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-        ],
+      child: Image.asset(
+        'assets/branding/bcreative_logo_white.png',
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
+        semanticLabel: 'B-Creative',
       ),
     );
   }
@@ -702,7 +737,7 @@ class _BrandText extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'BCreative',
+          'B-Creative',
           style: TextStyle(
             color: Colors.white,
             fontSize: 21,

@@ -87,11 +87,6 @@ class EmployeeSalaryController extends GetxController {
     _ensureSelectedRecord();
   }
 
-  void showAllMonths() {
-    selectedMonth.value = null;
-    _ensureSelectedRecord();
-  }
-
   void selectRecord(PayrollRecordModel record) {
     selectedRecordId.value = record.id;
     detailTab.value = 'salary';
