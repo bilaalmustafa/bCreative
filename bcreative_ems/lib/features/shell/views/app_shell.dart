@@ -596,6 +596,8 @@ class _SideBar extends StatelessWidget {
   final VoidCallback onToggle;
   final AuthController auth;
 
+
+
   @override
   Widget build(BuildContext context) {
     final items = isAdmin ? _adminItems : _employeeItems;
