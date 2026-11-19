@@ -26,6 +26,9 @@ class EmployeeProfileModel {
     this.isActive = true,
     this.joiningDate,
     this.employmentType,
+    this.compensationBasis = CompensationBasis.basicSalary,
+    this.basicSalary,
+    this.projectPercentage,
     this.bankName,
     this.accountNumber,
     this.createdAt,
@@ -51,6 +54,9 @@ class EmployeeProfileModel {
   final bool isActive;
   final DateTime? joiningDate;
   final EmploymentType? employmentType;
+  final CompensationBasis compensationBasis;
+  final num? basicSalary;
+  final num? projectPercentage;
   final String? bankName;
   final String? accountNumber;
   final DateTime? createdAt;
@@ -64,8 +70,8 @@ class EmployeeProfileModel {
   /// Mirrors the exact Firebase download URL stored by the admin record.
   String? get displayPhotoUrl => _downloadUrl(profilePhotoUrl);
 
-  /// Employee-safe payload retained for the self-service model contract.
-  /// Admin-controlled employment fields are deliberately excluded.
+  /// Employee self-service fields only. Employment details and basic salary
+  /// are read-only for the employee.
   Map<String, dynamic> toSelfServiceJson() => {
     'contactNumber': _trimOrNull(contactNumber),
     'nationality': _trimOrNull(nationality),
@@ -96,6 +102,11 @@ class EmployeeProfileModel {
       employmentType: EmploymentType.fromValue(
         json['employmentType'] as String?,
       ),
+      compensationBasis:
+          CompensationBasis.fromValue(json['compensationBasis'] as String?) ??
+          CompensationBasis.basicSalary,
+      basicSalary: json['basicSalary'] as num?,
+      projectPercentage: json['projectPercentage'] as num?,
       bankName: json['bankName'] as String?,
       accountNumber: json['accountNumber'] as String?,
       createdAt: _readDate(json['createdAt']),

@@ -54,7 +54,9 @@ class EmployeeModel {
     this.residentialAddress,
     this.joiningDate,
     this.employmentType,
+    this.compensationBasis = CompensationBasis.basicSalary,
     this.salary,
+    this.projectPercentage,
     this.bankDetails = const EmployeeBankDetails(),
     this.isActive = true,
     this.createdAt,
@@ -83,7 +85,9 @@ class EmployeeModel {
   final String? residentialAddress;
   final DateTime? joiningDate;
   final EmploymentType? employmentType;
+  final CompensationBasis compensationBasis;
   final num? salary;
+  final num? projectPercentage;
   final EmployeeBankDetails bankDetails;
   final bool isActive;
   final DateTime? createdAt;
@@ -121,7 +125,11 @@ class EmployeeModel {
       employmentType: EmploymentType.fromValue(
         json['employmentType'] as String?,
       ),
+      compensationBasis:
+          CompensationBasis.fromValue(json['compensationBasis'] as String?) ??
+          CompensationBasis.basicSalary,
       salary: json['salary'] as num?,
+      projectPercentage: json['projectPercentage'] as num?,
       bankDetails: EmployeeBankDetails.fromJson(_asMap(json['bankDetails'])),
       isActive: json['isActive'] as bool? ?? true,
       createdAt: _readDate(json['createdAt']),
@@ -165,7 +173,16 @@ class EmployeeModel {
           ? null
           : Timestamp.fromDate(joiningDate!),
       'employmentType': employmentType?.value,
-      if (includeSensitive) 'salary': salary,
+      'compensationBasis': compensationBasis.value,
+      if (includeSensitive)
+        'salary': compensationBasis == CompensationBasis.basicSalary
+            ? salary
+            : null,
+      if (includeSensitive)
+        'projectPercentage':
+            compensationBasis == CompensationBasis.projectPercentage
+            ? projectPercentage
+            : null,
       if (includeSensitive) 'bankDetails': bankDetails.toJson(),
       'isActive': isActive,
       if (includeCreatedAt)
@@ -177,6 +194,9 @@ class EmployeeModel {
   }
 
   /// The employee-safe projection duplicated in `employee_profiles`.
+  ///
+  /// Basic salary is read-only in the employee portal and is never included
+  /// in the employee's self-service update payload.
   Map<String, dynamic> toProfileJson({bool includeUpdatedAt = true}) {
     return {
       'employeeCode': employeeCode.trim(),
@@ -201,6 +221,14 @@ class EmployeeModel {
           ? null
           : Timestamp.fromDate(joiningDate!),
       'employmentType': employmentType?.value,
+      'compensationBasis': compensationBasis.value,
+      'basicSalary': compensationBasis == CompensationBasis.basicSalary
+          ? salary
+          : null,
+      'projectPercentage':
+          compensationBasis == CompensationBasis.projectPercentage
+          ? projectPercentage
+          : null,
       'bankName': _trimOrNull(bankDetails.bankName),
       'accountNumber': _trimOrNull(bankDetails.accountNumber),
       if (includeUpdatedAt) 'updatedAt': FieldValue.serverTimestamp(),
@@ -230,7 +258,9 @@ class EmployeeModel {
       residentialAddress: residentialAddress,
       joiningDate: joiningDate,
       employmentType: employmentType,
+      compensationBasis: compensationBasis,
       salary: salary,
+      projectPercentage: projectPercentage,
       bankDetails: bankDetails,
       isActive: isActive,
       createdAt: createdAt,

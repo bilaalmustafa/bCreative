@@ -28,6 +28,7 @@ class EmployeeFormController extends GetxController {
   final cnicController = TextEditingController();
   final addressController = TextEditingController();
   final salaryController = TextEditingController();
+  final projectPercentageController = TextEditingController();
   final bankNameController = TextEditingController();
   final accountTitleController = TextEditingController();
   final accountNumberController = TextEditingController();
@@ -37,6 +38,8 @@ class EmployeeFormController extends GetxController {
   final Rxn<DateTime> joiningDate = Rxn<DateTime>();
   final Rx<EmploymentStatus> employmentStatus = EmploymentStatus.active.obs;
   final Rxn<EmploymentType> employmentType = Rxn<EmploymentType>();
+  final Rx<CompensationBasis> compensationBasis =
+      CompensationBasis.basicSalary.obs;
   final Rxn<PlatformFile> profilePhoto = Rxn<PlatformFile>();
   final existingPhotoUrl = RxnString();
 
@@ -59,6 +62,8 @@ class EmployeeFormController extends GetxController {
     cnicController.text = employee.cnicPassport ?? '';
     addressController.text = employee.residentialAddress ?? '';
     salaryController.text = employee.salary?.toString() ?? '';
+    projectPercentageController.text =
+        employee.projectPercentage?.toString() ?? '';
     bankNameController.text = employee.bankDetails.bankName ?? '';
     accountTitleController.text = employee.bankDetails.accountTitle ?? '';
     accountNumberController.text = employee.bankDetails.accountNumber ?? '';
@@ -67,6 +72,7 @@ class EmployeeFormController extends GetxController {
     joiningDate.value = employee.joiningDate;
     employmentStatus.value = employee.employmentStatus;
     employmentType.value = employee.employmentType;
+    compensationBasis.value = employee.compensationBasis;
     existingPhotoUrl.value = employee.displayPhotoUrl;
     profilePhoto.value = null;
   }
@@ -127,7 +133,14 @@ class EmployeeFormController extends GetxController {
   }
 
   Future<String> _create() async {
-    final salary = double.tryParse(salaryController.text.trim());
+    final isBasicSalary =
+        compensationBasis.value == CompensationBasis.basicSalary;
+    final salary = isBasicSalary
+        ? double.tryParse(salaryController.text.trim())
+        : null;
+    final projectPercentage = isBasicSalary
+        ? null
+        : double.tryParse(projectPercentageController.text.trim());
     final employee = EmployeeModel(
       id: '',
       employeeCode: '',
@@ -146,7 +159,9 @@ class EmployeeFormController extends GetxController {
       residentialAddress: addressController.text,
       joiningDate: joiningDate.value,
       employmentType: employmentType.value,
+      compensationBasis: compensationBasis.value,
       salary: salary,
+      projectPercentage: projectPercentage,
       bankDetails: EmployeeBankDetails(
         bankName: bankNameController.text,
         accountTitle: accountTitleController.text,
@@ -169,7 +184,14 @@ class EmployeeFormController extends GetxController {
     final existing = await _repository.getById(employeeId);
     if (existing == null) return;
 
-    final salary = double.tryParse(salaryController.text.trim());
+    final isBasicSalary =
+        compensationBasis.value == CompensationBasis.basicSalary;
+    final salary = isBasicSalary
+        ? double.tryParse(salaryController.text.trim())
+        : null;
+    final projectPercentage = isBasicSalary
+        ? null
+        : double.tryParse(projectPercentageController.text.trim());
     final updated = EmployeeModel(
       id: existing.id,
       employeeCode: existing.employeeCode,
@@ -189,7 +211,9 @@ class EmployeeFormController extends GetxController {
       joiningDate: joiningDate.value,
       employmentStatus: employmentStatus.value,
       employmentType: employmentType.value,
+      compensationBasis: compensationBasis.value,
       salary: salary,
+      projectPercentage: projectPercentage,
       bankDetails: EmployeeBankDetails(
         bankName: bankNameController.text.trim(),
         accountTitle: accountTitleController.text.trim(),
@@ -225,6 +249,22 @@ class EmployeeFormController extends GetxController {
       Validators.required(v, field: 'Position');
   String? validateContact(String? v) =>
       Validators.required(v, field: 'Contact number');
+  String? validateBasicSalary(String? value) =>
+      _validatePositiveNumber(value, field: 'Basic salary');
+  String? validateProjectPercentage(String? value) {
+    final error = _validatePositiveNumber(value, field: 'Project percentage');
+    if (error != null) return error;
+    final percentage = double.parse(value!.trim());
+    return percentage > 100 ? 'Project percentage cannot exceed 100%.' : null;
+  }
+
+  String? _validatePositiveNumber(String? value, {required String field}) {
+    final amount = double.tryParse(value?.trim() ?? '');
+    if (amount == null || amount <= 0) {
+      return '$field must be greater than 0.';
+    }
+    return null;
+  }
 
   Future<void> pickProfilePhoto() async {
     final result = await FilePicker.platform.pickFiles(
@@ -266,6 +306,7 @@ class EmployeeFormController extends GetxController {
     cnicController.clear();
     addressController.clear();
     salaryController.clear();
+    projectPercentageController.clear();
     bankNameController.clear();
     accountTitleController.clear();
     accountNumberController.clear();
@@ -274,6 +315,7 @@ class EmployeeFormController extends GetxController {
     joiningDate.value = null;
     employmentStatus.value = EmploymentStatus.active;
     employmentType.value = null;
+    compensationBasis.value = CompensationBasis.basicSalary;
     profilePhoto.value = null;
     existingPhotoUrl.value = null;
   }
@@ -290,6 +332,7 @@ class EmployeeFormController extends GetxController {
     cnicController.dispose();
     addressController.dispose();
     salaryController.dispose();
+    projectPercentageController.dispose();
     bankNameController.dispose();
     accountTitleController.dispose();
     accountNumberController.dispose();

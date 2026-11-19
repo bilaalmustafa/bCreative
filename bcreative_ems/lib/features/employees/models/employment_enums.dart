@@ -35,3 +35,22 @@ enum EmploymentType {
     return null;
   }
 }
+
+/// Defines how an employee is paid. Existing employee records without this
+/// value continue to be treated as fixed-salary records.
+enum CompensationBasis {
+  basicSalary('basic_salary', 'Basic salary'),
+  projectPercentage('project_percentage', 'Project percentage');
+
+  const CompensationBasis(this.value, this.label);
+  final String value;
+  final String label;
+
+  static CompensationBasis? fromValue(String? value) {
+    if (value == null) return null;
+    for (final basis in CompensationBasis.values) {
+      if (basis.value == value) return basis;
+    }
+    return null;
+  }
+}

@@ -2,6 +2,7 @@ import 'package:bcreative_ems/core/utils/responsive.dart';
 import 'package:bcreative_ems/core/widgets/app_loading.dart';
 import 'package:bcreative_ems/core/widgets/empty_state.dart';
 import 'package:bcreative_ems/core/widgets/page_intro.dart';
+import 'package:bcreative_ems/features/employees/models/employment_enums.dart';
 import 'package:bcreative_ems/features/profile/models/employee_profile_model.dart';
 import 'package:bcreative_ems/features/profile/viewmodels/employee_profile_controller.dart';
 import 'package:bcreative_ems/features/shell/views/app_shell.dart';
@@ -169,6 +170,18 @@ class _EmployeeProfileCard extends StatelessWidget {
           icon: Icons.work_outline_rounded,
           label: 'Employment Type',
           value: profile.employmentType?.label ?? 'Not set',
+        ),
+        const SizedBox(height: 15),
+        _ProfileFact(
+          icon: Icons.payments_outlined,
+          label:
+              profile.compensationBasis == CompensationBasis.projectPercentage
+              ? 'Project Share'
+              : 'Basic Salary',
+          value:
+              profile.compensationBasis == CompensationBasis.projectPercentage
+              ? _projectPercentage(profile.projectPercentage)
+              : _basicSalary(profile.basicSalary),
         ),
       ],
     ),
@@ -596,3 +609,11 @@ String _text(String? value, {String fallback = 'Not set'}) {
 
 String _date(DateTime? value) =>
     value == null ? 'Not set' : DateFormat('dd MMM yyyy').format(value);
+
+String _basicSalary(num? salary) => salary == null
+    ? 'Not set'
+    : 'SAR ${NumberFormat.decimalPattern().format(salary)}';
+
+String _projectPercentage(num? percentage) => percentage == null
+    ? 'Not set'
+    : '${NumberFormat.decimalPattern().format(percentage)}% per project';

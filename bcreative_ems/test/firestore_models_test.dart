@@ -33,6 +33,37 @@ void main() {
     expect(restored.employmentStatus, EmploymentStatus.onLeave);
     expect(restored.bankDetails.bankName, 'Example Bank');
     expect(restored.joiningDate?.toUtc(), joinedAt);
+    expect(
+      employee.toProfileJson(includeUpdatedAt: false)['basicSalary'],
+      5000,
+    );
+    expect(
+      employee.toJson(includeUpdatedAt: false)['compensationBasis'],
+      CompensationBasis.basicSalary.value,
+    );
+  });
+
+  test('EmployeeModel keeps a project-percentage compensation basis', () {
+    const employee = EmployeeModel(
+      id: 'employee-2',
+      employeeCode: 'EMP-0002',
+      fullName: 'Omar Ali',
+      email: 'omar@example.com',
+      compensationBasis: CompensationBasis.projectPercentage,
+      projectPercentage: 30,
+    );
+
+    final employeeJson = employee.toJson(includeUpdatedAt: false);
+    final profileJson = employee.toProfileJson(includeUpdatedAt: false);
+
+    expect(
+      employeeJson['compensationBasis'],
+      CompensationBasis.projectPercentage.value,
+    );
+    expect(employeeJson['projectPercentage'], 30);
+    expect(employeeJson['salary'], isNull);
+    expect(profileJson['projectPercentage'], 30);
+    expect(profileJson['basicSalary'], isNull);
   });
 
   test('EmployeeProfileModel keeps only employee-safe update fields', () {
@@ -42,6 +73,7 @@ void main() {
       email: 'ayesha@example.com',
       department: 'Design',
       contactNumber: '+966500000000',
+      basicSalary: 5000,
     );
 
     final update = profile.toSelfServiceJson();
@@ -56,6 +88,8 @@ void main() {
       ]),
     );
     expect(update, isNot(contains('department')));
+    expect(update, isNot(contains('basicSalary')));
+    expect(update, isNot(contains('projectPercentage')));
   });
 
   test('UserAccessModel stores the employee role without password data', () {

@@ -1366,16 +1366,54 @@ class _EmploymentTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 13),
-        const _FieldLabel('Monthly Salary (restricted)'),
-        TextFormField(
-          controller: formController.salaryController,
-          readOnly: readOnly,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            prefixText: 'SAR ',
-            hintText: 'Optional',
+        const _FieldLabel('Payment Basis *'),
+        Obx(
+          () => DropdownButtonFormField<CompensationBasis>(
+            key: ValueKey(formController.compensationBasis.value),
+            initialValue: formController.compensationBasis.value,
+            decoration: const InputDecoration(hintText: 'Select payment basis'),
+            items: CompensationBasis.values
+                .map(
+                  (basis) =>
+                      DropdownMenuItem(value: basis, child: Text(basis.label)),
+                )
+                .toList(),
+            onChanged: readOnly
+                ? null
+                : (basis) {
+                    if (basis != null) {
+                      formController.compensationBasis.value = basis;
+                    }
+                  },
           ),
         ),
+        const SizedBox(height: 13),
+        Obx(() {
+          final isBasicSalary =
+              formController.compensationBasis.value ==
+              CompensationBasis.basicSalary;
+          return TextFormField(
+            key: ValueKey(formController.compensationBasis.value),
+            controller: isBasicSalary
+                ? formController.salaryController
+                : formController.projectPercentageController,
+            readOnly: readOnly,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            validator: isBasicSalary
+                ? formController.validateBasicSalary
+                : formController.validateProjectPercentage,
+            decoration: InputDecoration(
+              prefixText: isBasicSalary ? 'SAR ' : null,
+              suffixText: isBasicSalary ? null : '%',
+              labelText: isBasicSalary
+                  ? 'Monthly Basic Salary'
+                  : 'Project Percentage',
+              hintText: isBasicSalary
+                  ? 'Enter monthly basic salary'
+                  : 'For example: 30 or 50',
+            ),
+          );
+        }),
         const SizedBox(height: 13),
         _LabeledInput(
           label: 'Bank Name',
