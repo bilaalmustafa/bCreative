@@ -5,6 +5,10 @@ import 'package:bcreative_ems/core/utils/responsive.dart';
 import 'package:bcreative_ems/core/widgets/app_loading.dart';
 import 'package:bcreative_ems/core/widgets/header_action_layout.dart';
 import 'package:bcreative_ems/core/widgets/page_intro.dart';
+import 'package:bcreative_ems/features/dashboard/components/dashboard_panel.dart';
+import 'package:bcreative_ems/features/dashboard/components/dashboard_data_warning.dart';
+import 'package:bcreative_ems/features/dashboard/components/dashboard_empty_panel.dart';
+import 'package:bcreative_ems/features/dashboard/components/dashboard_panel_title.dart';
 import 'package:bcreative_ems/features/dashboard/viewmodels/dashboard_controller.dart';
 import 'package:bcreative_ems/features/projects/models/project_model.dart';
 import 'package:bcreative_ems/features/shell/views/app_shell.dart';
@@ -99,7 +103,7 @@ class _DashboardContent extends StatelessWidget {
                 ),
                 if (loadError != null) ...[
                   const SizedBox(height: 14),
-                  _DataWarning(message: loadError),
+                  DashboardDataWarning(message: loadError),
                 ],
                 const SizedBox(height: 20),
                 _StatsLayout(cards: statCards),
@@ -455,7 +459,7 @@ class _StatCard extends StatelessWidget {
   final bool compactValue;
 
   @override
-  Widget build(BuildContext context) => _Panel(
+  Widget build(BuildContext context) => DashboardPanel(
     child: LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 170;
@@ -589,13 +593,13 @@ class _ProjectProgressPanel extends StatelessWidget {
   final List<ProjectProgressItem> items;
 
   @override
-  Widget build(BuildContext context) => _Panel(
+  Widget build(BuildContext context) => DashboardPanel(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            const Expanded(child: _PanelTitle('Project Progress')),
+            const Expanded(child: DashboardPanelTitle('Project Progress')),
             TextButton(
               onPressed: () => Get.toNamed(AppRoutes.adminProjects),
               child: const Text('View All Projects'),
@@ -604,7 +608,7 @@ class _ProjectProgressPanel extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         if (items.isEmpty)
-          const _EmptyPanel(
+          const DashboardEmptyPanel(
             icon: Icons.folder_off_outlined,
             message: 'No projects found yet.',
           )
@@ -754,11 +758,11 @@ class _TaskStatusPanel extends StatelessWidget {
       summary.overdue,
     ];
     const labels = ['Completed', 'In Progress', 'Pending', 'Overdue'];
-    return _Panel(
+    return DashboardPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PanelTitle('Task Status'),
+          const DashboardPanelTitle('Task Status'),
           const SizedBox(height: 12),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -922,15 +926,15 @@ class _AttendanceSummaryPanel extends StatelessWidget {
   final bool centerContent;
 
   @override
-  Widget build(BuildContext context) => _Panel(
+  Widget build(BuildContext context) => DashboardPanel(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            const Expanded(child: _PanelTitle('Attendance Summary')),
+            const Expanded(child: DashboardPanelTitle('Attendance Summary')),
             Text(
-              DateFormat('MMM yyyy').format(range.start),
+              _rangeLabel(range),
               style: const TextStyle(
                 color: Color(0xFF5070A7),
                 fontSize: 11,
@@ -969,8 +973,17 @@ class _AttendanceSummaryContent extends StatelessWidget {
           children: [
             CustomPaint(
               size: const Size.square(126),
-              painter: _PercentageRingPainter(
-                value: attendance.percentage / 100,
+              painter: _DonutPainter(
+                values: [
+                  attendance.present,
+                  attendance.late,
+                  attendance.absent,
+                ],
+                colors: const [
+                  Color(0xFF13BA78),
+                  Color(0xFFFFAD19),
+                  Color(0xFFFF4D45),
+                ],
               ),
             ),
             Column(
@@ -1092,11 +1105,11 @@ class _ProjectStatusPanel extends StatelessWidget {
   final _ProjectCounts counts;
 
   @override
-  Widget build(BuildContext context) => _Panel(
+  Widget build(BuildContext context) => DashboardPanel(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _PanelTitle('Project Status'),
+        const DashboardPanelTitle('Project Status'),
         const SizedBox(height: 10),
         Column(
           children: [
@@ -1192,42 +1205,48 @@ class _AttendanceTrendPanel extends StatelessWidget {
   final List<AttendanceTrendPoint> trend;
 
   @override
-  Widget build(BuildContext context) => _Panel(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Row(
-          children: [
-            Expanded(child: _PanelTitle('Attendance Trend')),
-            Text(
-              'Last 7 days',
-              style: TextStyle(
-                color: Color(0xFF5070A7),
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
+  Widget build(BuildContext context) {
+    final label = trend.isEmpty
+        ? 'No dates selected'
+        : '${DateFormat('d MMM').format(trend.first.date)} – '
+              '${DateFormat('d MMM').format(trend.last.date)}';
+    return DashboardPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(child: DashboardPanelTitle('Attendance Trend')),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFF5070A7),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (trend.isEmpty)
+            const DashboardEmptyPanel(
+              icon: Icons.bar_chart_rounded,
+              message: 'No attendance dates in this period.',
+            )
+          else
+            SizedBox(
+              height: 150,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: trend
+                    .map((item) => Expanded(child: _TrendBar(item: item)))
+                    .toList(),
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (trend.isEmpty)
-          const _EmptyPanel(
-            icon: Icons.bar_chart_rounded,
-            message: 'No attendance records yet.',
-          )
-        else
-          SizedBox(
-            height: 150,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: trend
-                  .map((item) => Expanded(child: _TrendBar(item: item)))
-                  .toList(),
-            ),
-          ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _TrendBar extends StatelessWidget {
@@ -1313,120 +1332,6 @@ class _DonutPainter extends CustomPainter {
       oldDelegate.values != values || oldDelegate.colors != colors;
 }
 
-class _PercentageRingPainter extends CustomPainter {
-  const _PercentageRingPainter({required this.value});
-
-  final double value;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 13
-      ..strokeCap = StrokeCap.round;
-    final rect = Rect.fromCircle(
-      center: size.center(Offset.zero),
-      radius: (size.width - 13) / 2,
-    );
-    paint.color = const Color(0xFFE4F4EC);
-    canvas.drawArc(rect, 0, math.pi * 2, false, paint);
-    paint.color = const Color(0xFF13B978);
-    canvas.drawArc(
-      rect,
-      -math.pi / 2,
-      math.pi * 2 * value.clamp(0, 1),
-      false,
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _PercentageRingPainter oldDelegate) =>
-      oldDelegate.value != value;
-}
-
-class _Panel extends StatelessWidget {
-  const _Panel({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(17),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const Color(0xFFE7EDF7)),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x0A1B3D70),
-          blurRadius: 18,
-          offset: Offset(0, 6),
-        ),
-      ],
-    ),
-    child: child,
-  );
-}
-
-class _PanelTitle extends StatelessWidget {
-  const _PanelTitle(this.title);
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) => Text(
-    title,
-    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-  );
-}
-
-class _EmptyPanel extends StatelessWidget {
-  const _EmptyPanel({required this.icon, required this.message});
-
-  final IconData icon;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 30),
-    child: Center(
-      child: Column(
-        children: [
-          Icon(icon, color: const Color(0xFF8AA0C7), size: 32),
-          const SizedBox(height: 8),
-          Text(message, style: const TextStyle(color: Color(0xFF6B7F9F))),
-        ],
-      ),
-    ),
-  );
-}
-
-class _DataWarning extends StatelessWidget {
-  const _DataWarning({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: const Color(0xFFFFF4DD),
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: const Color(0xFFFFD88C)),
-    ),
-    child: Row(
-      children: [
-        const Icon(Icons.info_outline_rounded, color: Color(0xFFAD7000)),
-        const SizedBox(width: 9),
-        Expanded(
-          child: Text('Some live dashboard data is unavailable: $message'),
-        ),
-      ],
-    ),
-  );
-}
-
 const _labelStyle = TextStyle(
   fontSize: 12,
   color: Color(0xFF344C78),
@@ -1440,6 +1345,16 @@ const _tableHeaderStyle = TextStyle(
 
 String _currency(double value) =>
     'SAR ${NumberFormat.decimalPattern().format(value.round())}';
+String _rangeLabel(DateTimeRange range) {
+  final start = DateUtils.dateOnly(range.start);
+  final end = DateUtils.dateOnly(range.end);
+  if (start.year == end.year && start.month == end.month) {
+    return DateFormat('MMM yyyy').format(start);
+  }
+  return '${DateFormat('d MMM').format(start)} – '
+      '${DateFormat('d MMM y').format(end)}';
+}
+
 String _percentLabel(int numerator, int denominator) => denominator == 0
     ? 'No active employees'
     : '${(numerator * 100 / denominator).toStringAsFixed(1)}% checked in';

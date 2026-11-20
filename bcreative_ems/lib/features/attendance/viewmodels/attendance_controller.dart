@@ -4,6 +4,7 @@ import 'package:bcreative_ems/core/errors/failure_mapper.dart';
 import 'package:bcreative_ems/features/attendance/models/attendance_record_model.dart';
 import 'package:bcreative_ems/features/attendance/repositories/attendance_repository.dart';
 import 'package:bcreative_ems/features/employees/models/employee_model.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 /// Live, admin-only attendance management state. It deliberately creates an
@@ -31,11 +32,13 @@ class AttendanceController extends GetxController {
   ).obs;
   final Rx<DateTime> selectedDate = DateTime.now().obs;
   final RxnString departmentFilter = RxnString();
-  final RxnString employeeFilter = RxnString();
+  final RxString employeeNameQuery = ''.obs;
   final Rxn<AttendanceStatus> statusFilter = Rxn<AttendanceStatus>();
   final RxnString selectedEmployeeId = RxnString();
   final RxString detailTab = 'attendance'.obs;
   final RxInt currentPage = 0.obs;
+  final TextEditingController employeeSearchController =
+      TextEditingController();
 
   StreamSubscription<List<EmployeeModel>>? _employeesSubscription;
   StreamSubscription<List<AttendanceRecordModel>>? _recordsSubscription;
@@ -74,6 +77,7 @@ class AttendanceController extends GetxController {
         if (_sameDay(record.date, selectedDate.value))
           record.employeeId: record,
     };
+    final query = employeeNameQuery.value.trim().toLowerCase();
     final items =
         activeEmployees
             .where(
@@ -89,8 +93,7 @@ class AttendanceController extends GetxController {
             )
             .where((row) {
               final matchesEmployee =
-                  employeeFilter.value == null ||
-                  row.employee.id == employeeFilter.value;
+                  query.isEmpty || row.employee.fullNameLower.contains(query);
               final matchesStatus =
                   statusFilter.value == null ||
                   row.effectiveStatus == statusFilter.value;
@@ -280,8 +283,8 @@ class AttendanceController extends GetxController {
     _applyFilters();
   }
 
-  void setEmployeeFilter(String? value) {
-    employeeFilter.value = value;
+  void setEmployeeNameQuery(String value) {
+    employeeNameQuery.value = value;
     currentPage.value = 0;
     _applyFilters();
   }
@@ -293,11 +296,23 @@ class AttendanceController extends GetxController {
   }
 
   void resetFilters() {
-    departmentFilter.value = null;
-    employeeFilter.value = null;
-    statusFilter.value = null;
+    resetToCurrentMonthAndToday(clearFilters: true);
+  }
+
+  /// Restores the attendance directory to today's employee register and keeps
+  /// the read-only range label on the first and last day of the current month.
+  void resetToCurrentMonthAndToday({bool clearFilters = false}) {
+    if (clearFilters) {
+      departmentFilter.value = null;
+      employeeSearchController.clear();
+      employeeNameQuery.value = '';
+      statusFilter.value = null;
+    }
+    final now = DateTime.now();
+    selectedMonth.value = DateTime(now.year, now.month);
+    selectedDate.value = now;
     currentPage.value = 0;
-    _applyFilters();
+    _watchMonthRecords();
   }
 
   void setDetailTab(String value) => detailTab.value = value;
@@ -382,6 +397,7 @@ class AttendanceController extends GetxController {
     _employeesSubscription?.cancel();
     _recordsSubscription?.cancel();
     _todayRecordsSubscription?.cancel();
+    employeeSearchController.dispose();
     super.onClose();
   }
 }

@@ -4,6 +4,9 @@ import 'package:bcreative_ems/core/utils/responsive.dart';
 import 'package:bcreative_ems/features/auth/viewmodels/auth_controller.dart';
 import 'package:bcreative_ems/features/notifications/models/app_notification_model.dart';
 import 'package:bcreative_ems/features/notifications/viewmodels/notification_controller.dart';
+import 'package:bcreative_ems/features/shell/components/shell_brand_mark.dart';
+import 'package:bcreative_ems/features/shell/components/shell_brand_text.dart';
+import 'package:bcreative_ems/features/shell/components/shell_side_nav_item.dart';
 import 'package:bcreative_ems/features/profile/models/employee_profile_model.dart';
 import 'package:bcreative_ems/features/profile/repositories/employee_profile_repository.dart';
 import 'package:bcreative_ems/features/shell/viewmodels/shell_controller.dart';
@@ -596,8 +599,6 @@ class _SideBar extends StatelessWidget {
   final VoidCallback onToggle;
   final AuthController auth;
 
-
-
   @override
   Widget build(BuildContext context) {
     final items = isAdmin ? _adminItems : _employeeItems;
@@ -634,10 +635,10 @@ class _SideBar extends StatelessWidget {
                         ? MainAxisAlignment.spaceBetween
                         : MainAxisAlignment.start,
                     children: [
-                      _BrandMark(small: compactHeader),
+                      ShellBrandMark(small: compactHeader),
                       if (showLabels) ...[
                         const SizedBox(width: 10),
-                        const Expanded(child: _BrandText()),
+                        const Expanded(child: ShellBrandText()),
                       ],
                       IconButton(
                         tooltip: expanded ? 'Collapse menu' : 'Expand menu',
@@ -666,8 +667,10 @@ class _SideBar extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     itemCount: items.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 4),
-                    itemBuilder: (context, index) =>
-                        _SideNavItem(item: items[index], expanded: showLabels),
+                    itemBuilder: (context, index) => ShellSideNavItem(
+                      item: items[index],
+                      expanded: showLabels,
+                    ),
                   ),
                 ),
                 Padding(
@@ -675,7 +678,7 @@ class _SideBar extends StatelessWidget {
                   child: showLabels
                       ? const Row(
                           children: [
-                            _BrandMark(small: true),
+                            ShellBrandMark(small: true),
                             SizedBox(width: 10),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -698,134 +701,13 @@ class _SideBar extends StatelessWidget {
                             ),
                           ],
                         )
-                      : const Center(child: _BrandMark(small: true)),
+                      : const Center(child: ShellBrandMark(small: true)),
                 ),
               ],
             ),
           ),
         );
       },
-    );
-  }
-}
-
-class _BrandMark extends StatelessWidget {
-  const _BrandMark({this.small = false});
-
-  final bool small;
-
-  @override
-  Widget build(BuildContext context) {
-    final size = small ? 30.0 : 80.0;
-    return SizedBox(
-      height: size,
-      width: size,
-      child: Image.asset(
-        'assets/branding/bcreative_logo_white.png',
-        fit: BoxFit.contain,
-        filterQuality: FilterQuality.high,
-        semanticLabel: 'B-Creative',
-      ),
-    );
-  }
-}
-
-class _BrandText extends StatelessWidget {
-  const _BrandText();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'B-Creative',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 21,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -.5,
-          ),
-        ),
-        Text(
-          'EMS',
-          style: TextStyle(
-            color: Color(0xFF78A5FF),
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SideNavItem extends StatelessWidget {
-  const _SideNavItem({required this.item, required this.expanded});
-
-  final ShellNavItem item;
-  final bool expanded;
-
-  @override
-  Widget build(BuildContext context) {
-    final active =
-        item.route.isNotEmpty && Get.currentRoute.startsWith(item.route);
-    return Tooltip(
-      message: item.label,
-      child: Material(
-        color: active ? const Color(0xFF3975F5) : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: () {
-            if (item.route.isNotEmpty) {
-              Get.toNamed(item.route);
-            } else {
-              Get.snackbar(
-                'Coming soon',
-                '${item.label} is not implemented yet.',
-              );
-            }
-          },
-          child: Container(
-            height: 49,
-            padding: EdgeInsets.symmetric(horizontal: expanded ? 14 : 0),
-            child: Row(
-              mainAxisAlignment: expanded
-                  ? MainAxisAlignment.start
-                  : MainAxisAlignment.center,
-              children: [
-                Icon(
-                  item.icon,
-                  color: active ? Colors.white : const Color(0xFFE2EAFE),
-                  size: 21,
-                ),
-                if (expanded) ...[
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      item.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  if (item.isComingSoon)
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      color: Color(0xFFB8C8E4),
-                      size: 19,
-                    ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -847,9 +729,9 @@ class _AppDrawer extends StatelessWidget {
             decoration: const BoxDecoration(color: Color(0xFF14233F)),
             child: Row(
               children: [
-                const _BrandMark(),
+                const ShellBrandMark(),
                 const SizedBox(width: 12),
-                const _BrandText(),
+                const ShellBrandText(),
               ],
             ),
           ),
@@ -862,8 +744,9 @@ class _AppDrawer extends StatelessWidget {
                   : null,
               onTap: () {
                 Navigator.pop(context);
-                if (item.route.isNotEmpty) {
-                  Get.toNamed(item.route);
+                if (item.route.isNotEmpty &&
+                    !Get.currentRoute.startsWith(item.route)) {
+                  Get.offNamed(item.route, preventDuplicates: true);
                 } else {
                   Get.snackbar(
                     'Coming soon',

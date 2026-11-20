@@ -1,4 +1,6 @@
 import 'package:bcreative_ems/core/utils/responsive.dart';
+import 'package:bcreative_ems/core/widgets/app_reset_button.dart';
+import 'package:bcreative_ems/core/widgets/app_surface.dart';
 import 'package:bcreative_ems/core/widgets/page_intro.dart';
 import 'package:bcreative_ems/features/attendance/models/attendance_record_model.dart';
 import 'package:bcreative_ems/features/attendance/viewmodels/attendance_controller.dart';
@@ -8,8 +10,23 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
-class AttendanceManagementView extends GetView<AttendanceController> {
+class AttendanceManagementView extends StatefulWidget {
   const AttendanceManagementView({super.key});
+
+  @override
+  State<AttendanceManagementView> createState() =>
+      _AttendanceManagementViewState();
+}
+
+class _AttendanceManagementViewState extends State<AttendanceManagementView> {
+  late final AttendanceController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.find<AttendanceController>();
+    controller.resetToCurrentMonthAndToday(clearFilters: true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +120,7 @@ class _AttendanceContent extends StatelessWidget {
                 const SizedBox(height: 14),
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final records = _Surface(
+                    final records = AppSurface.content(
                       padding: EdgeInsets.zero,
                       child: Column(
                         children: [
@@ -177,7 +194,7 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _Surface(
+    return AppSurface.content(
       child: Row(
         children: [
           Container(
@@ -245,71 +262,100 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = Obx(
-      () => Wrap(
-        spacing: 12,
-        runSpacing: 10,
-        children: [
-          _FieldShell(
-            width: 228,
-            label: 'Date Range',
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.date_range_outlined,
-                  size: 20,
-                  color: Color(0xFF54709C),
+    final content = LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 12.0;
+        final availableWidth = constraints.maxWidth;
+        final isSingleColumn = availableWidth < 510;
+        final isWide = availableWidth >= 960;
+        final compactWidth = isSingleColumn
+            ? availableWidth
+            : (availableWidth - gap) / 2;
+        final searchWidth = isWide ? 250.0 : compactWidth;
+        final departmentWidth = isWide ? 186.0 : compactWidth;
+        final statusWidth = isWide ? 176.0 : compactWidth;
+        final dateRangeWidth = isWide ? 228.0 : compactWidth;
+        const resetWidth = 40.0;
+
+        return Obx(
+          () => Wrap(
+            spacing: gap,
+            runSpacing: 10,
+            children: [
+              SizedBox(
+                width: searchWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Search employees',
+                      style: _attendanceFieldLabel,
+                    ),
+                    const SizedBox(height: 5),
+                    SizedBox(
+                      height: 39,
+                      child: TextField(
+                        controller: controller.employeeSearchController,
+                        onChanged: controller.setEmployeeNameQuery,
+                        textInputAction: TextInputAction.search,
+                        style: const TextStyle(fontSize: 12),
+                        decoration: _attendanceSearchDecoration(
+                          'Search by name...',
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    '${DateFormat('dd MMM yyyy').format(controller.rangeStart)} - ${DateFormat('dd MMM yyyy').format(controller.rangeEnd)}',
-                    style: const TextStyle(fontSize: 12),
+              ),
+              _FilterDropdown<String>(
+                label: 'Department',
+                width: departmentWidth,
+                value: controller.departmentFilter.value,
+                allLabel: 'All Departments',
+                values: controller.departments,
+                onChanged: controller.setDepartmentFilter,
+              ),
+              _FilterDropdown<AttendanceStatus>(
+                label: 'Status',
+                width: statusWidth,
+                value: controller.statusFilter.value,
+                allLabel: 'All Status',
+                values: AttendanceStatus.values,
+                labelFor: (status) => status.label,
+                onChanged: controller.setStatusFilter,
+              ),
+              _FieldShell(
+                width: dateRangeWidth,
+                label: 'Date Range',
+                child: Text(
+                  '${DateFormat('dd MMM yyyy').format(controller.rangeStart)} - ${DateFormat('dd MMM yyyy').format(controller.rangeEnd)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+              SizedBox(
+                width: resetWidth,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 22),
+                  child: SizedBox(
+                    height: 39,
+                    child: AppResetButton(onPressed: controller.resetFilters),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          _FilterDropdown<String>(
-            label: 'Department',
-            width: 186,
-            value: controller.departmentFilter.value,
-            allLabel: 'All Departments',
-            values: controller.departments,
-            onChanged: controller.setDepartmentFilter,
-          ),
-          _FilterDropdown<String>(
-            label: 'Employee',
-            width: 192,
-            value: controller.employeeFilter.value,
-            allLabel: 'All Employees',
-            values: controller.activeEmployees.map((item) => item.id).toList(),
-            labelFor: (id) => controller.employeeFor(id)?.fullName ?? id,
-            onChanged: controller.setEmployeeFilter,
-          ),
-          _FilterDropdown<AttendanceStatus>(
-            label: 'Status',
-            width: 176,
-            value: controller.statusFilter.value,
-            allLabel: 'All Status',
-            values: AttendanceStatus.values,
-            labelFor: (status) => status.label,
-            onChanged: controller.setStatusFilter,
-          ),
-          Tooltip(
-            message: 'Reset filters',
-            child: IconButton.outlined(
-              onPressed: controller.resetFilters,
-              icon: const Icon(Icons.filter_alt_off_outlined),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
     if (embedded) {
       return Padding(padding: const EdgeInsets.all(12), child: content);
     }
-    return _Surface(padding: const EdgeInsets.all(12), child: content);
+    return AppSurface.content(
+      padding: const EdgeInsets.all(12),
+      child: content,
+    );
   }
 }
 
@@ -350,6 +396,33 @@ class _FieldShell extends StatelessWidget {
     );
   }
 }
+
+const _attendanceFieldLabel = TextStyle(
+  fontSize: 11,
+  fontWeight: FontWeight.w700,
+  color: Color(0xFF3C5178),
+);
+
+InputDecoration _attendanceSearchDecoration(String hintText) => InputDecoration(
+  hintText: hintText,
+  hintStyle: const TextStyle(fontSize: 11),
+  prefixIcon: const Icon(Icons.search_rounded, size: 19),
+  filled: true,
+  fillColor: const Color(0xFFF4F7FC),
+  contentPadding: EdgeInsets.zero,
+  border: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(8),
+    borderSide: const BorderSide(color: Color(0xFFDDE6F4)),
+  ),
+  enabledBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(8),
+    borderSide: const BorderSide(color: Color(0xFFDDE6F4)),
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(8),
+    borderSide: const BorderSide(color: Color(0xFF2468F2)),
+  ),
+);
 
 class _FilterDropdown<T> extends StatelessWidget {
   const _FilterDropdown({
@@ -412,12 +485,12 @@ class _CalendarColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _Surface(
+        AppSurface.content(
           padding: const EdgeInsets.all(15),
           child: _Calendar(controller: controller),
         ),
         const SizedBox(height: 14),
-        _Surface(
+        AppSurface.content(
           padding: const EdgeInsets.all(15),
           child: _AttendanceOverview(controller: controller),
         ),
@@ -760,10 +833,7 @@ class _AttendanceDirectory extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
-              TextButton(
-                onPressed: controller.resetFilters,
-                child: const Text('Reset Filters'),
-              ),
+              AppResetButton(onPressed: controller.resetFilters),
             ],
           ),
         ),
@@ -830,7 +900,7 @@ class _AttendanceDirectory extends StatelessWidget {
     );
     return embedded
         ? content
-        : _Surface(padding: EdgeInsets.zero, child: content);
+        : AppSurface.content(padding: EdgeInsets.zero, child: content);
   }
 }
 
@@ -1245,7 +1315,7 @@ class _AttendanceDetails extends StatelessWidget {
   const _AttendanceDetails({required this.controller});
   final AttendanceController controller;
   @override
-  Widget build(BuildContext context) => _Surface(
+  Widget build(BuildContext context) => AppSurface.content(
     padding: EdgeInsets.zero,
     child: Obx(() {
       final employee = controller.selectedEmployee;
@@ -1272,11 +1342,7 @@ class _AttendanceDetails extends StatelessWidget {
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
-                TextButton.icon(
-                  onPressed: controller.resetFilters,
-                  icon: const Icon(Icons.refresh_rounded, size: 17),
-                  label: const Text('Reset Filters'),
-                ),
+                AppResetButton(onPressed: controller.resetFilters),
               ],
             ),
           ),
@@ -1860,31 +1926,6 @@ class _EmployeeAvatar extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Surface extends StatelessWidget {
-  const _Surface({
-    required this.child,
-    this.padding = const EdgeInsets.all(16),
-  });
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: padding,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x0A294E85),
-          blurRadius: 18,
-          offset: Offset(0, 5),
-        ),
-      ],
-    ),
-    child: child,
-  );
 }
 
 Color _statusColor(AttendanceStatus status) => switch (status) {

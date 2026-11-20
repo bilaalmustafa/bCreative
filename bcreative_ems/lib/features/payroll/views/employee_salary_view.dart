@@ -2,6 +2,7 @@ import 'dart:ui' show PointerDeviceKind;
 
 import 'package:bcreative_ems/core/utils/responsive.dart';
 import 'package:bcreative_ems/core/widgets/app_loading.dart';
+import 'package:bcreative_ems/core/widgets/app_surface.dart';
 import 'package:bcreative_ems/core/widgets/page_intro.dart';
 import 'package:bcreative_ems/features/payroll/models/payroll_record_model.dart';
 import 'package:bcreative_ems/features/payroll/viewmodels/employee_salary_controller.dart';
@@ -45,7 +46,7 @@ class _EmployeeSalaryContent extends StatelessWidget {
                 const SizedBox(height: 14),
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final records = _SalarySurface(
+                    final records = AppSurface.content(
                       padding: EdgeInsets.zero,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -161,19 +162,17 @@ class _SalaryMetric extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
-    this.caption,
     required this.color,
     required this.background,
   });
   final IconData icon;
   final String label;
   final String value;
-  final String? caption;
   final Color color;
   final Color background;
 
   @override
-  Widget build(BuildContext context) => _SalarySurface(
+  Widget build(BuildContext context) => AppSurface.content(
     child: Row(
       children: [
         Container(
@@ -211,18 +210,6 @@ class _SalaryMetric extends StatelessWidget {
                   fontWeight: FontWeight.w800,
                 ),
               ),
-              if (caption?.isNotEmpty == true) ...[
-                const SizedBox(height: 2),
-                Text(
-                  caption!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Color(0xFF7185A9),
-                  ),
-                ),
-              ],
             ],
           ),
         ),
@@ -290,7 +277,10 @@ class _SalaryMonthFilter extends StatelessWidget {
     if (embedded) {
       return Padding(padding: const EdgeInsets.all(12), child: content);
     }
-    return _SalarySurface(padding: const EdgeInsets.all(12), child: content);
+    return AppSurface.content(
+      padding: const EdgeInsets.all(12),
+      child: content,
+    );
   }
 }
 
@@ -330,7 +320,7 @@ class _SalaryRecords extends StatelessWidget {
     });
     return embedded
         ? content
-        : _SalarySurface(padding: EdgeInsets.zero, child: content);
+        : AppSurface.content(padding: EdgeInsets.zero, child: content);
   }
 }
 
@@ -484,7 +474,7 @@ class _EmployeeSalaryDetails extends StatelessWidget {
   final EmployeeSalaryController controller;
 
   @override
-  Widget build(BuildContext context) => _SalarySurface(
+  Widget build(BuildContext context) => AppSurface.content(
     padding: EdgeInsets.zero,
     child: Obx(() {
       final record = controller.selectedRecord;
@@ -889,32 +879,6 @@ class _PaidChip extends StatelessWidget {
         fontWeight: FontWeight.w700,
       ),
     ),
-  );
-}
-
-class _SalarySurface extends StatelessWidget {
-  const _SalarySurface({
-    required this.child,
-    this.padding = const EdgeInsets.all(16),
-  });
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: padding,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x0A294E85),
-          blurRadius: 18,
-          offset: Offset(0, 5),
-        ),
-      ],
-    ),
-    child: child,
   );
 }
 

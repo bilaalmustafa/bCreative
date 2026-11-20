@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bcreative_ems/core/errors/failure_mapper.dart';
+import 'package:bcreative_ems/core/services/session_preferences.dart';
 import 'package:bcreative_ems/features/employees/models/employee_model.dart';
 import 'package:bcreative_ems/features/employees/models/employment_enums.dart';
 import 'package:bcreative_ems/features/employees/repositories/employee_repository.dart';
@@ -10,11 +11,13 @@ import 'package:get/get.dart';
 enum EmployeeComposerMode { create, view, edit }
 
 class EmployeeListController extends GetxController {
-  EmployeeListController(this._repository);
+  EmployeeListController(this._repository, this._preferences);
 
   final EmployeeRepository _repository;
+  final SessionPreferences _preferences;
 
   static const int pageSize = 10;
+  static const int _employeeProfilesSchemaVersion = 2;
 
   final searchController = TextEditingController();
   final RxList<EmployeeModel> employees = <EmployeeModel>[].obs;
@@ -32,8 +35,8 @@ class EmployeeListController extends GetxController {
   final Rxn<EmployeeModel> selectedEmployee = Rxn<EmployeeModel>();
 
   StreamSubscription<List<EmployeeModel>>? _employeesSubscription;
-  StreamSubscription<EmployeeOverviewStats>? _overviewSubscription;
   Timer? _searchDebounce;
+  bool _profileBackfillStarted = false;
 
   List<String> get departments =>
       _allEmployees
@@ -62,22 +65,16 @@ class EmployeeListController extends GetxController {
     _employeesSubscription = _repository.watchAll().listen(
       (items) {
         _allEmployees.assignAll(items);
+        overview.value = EmployeeOverviewStats.fromEmployees(items);
         _refreshSelectedEmployee(items);
         _applyFilters();
         isLoading.value = false;
-        unawaited(_synchronizeProfileProjections(items));
+        unawaited(_backfillProfileProjectionsOnce(items));
       },
       onError: (Object error) {
         isLoading.value = false;
         Get.snackbar('Employees unavailable', FailureMapper.message(error));
       },
-    );
-    _overviewSubscription = _repository.watchOverview().listen(
-      (stats) => overview.value = stats,
-      onError: (Object error) => Get.snackbar(
-        'Employee totals unavailable',
-        FailureMapper.message(error),
-      ),
     );
   }
 
@@ -89,12 +86,25 @@ class EmployeeListController extends GetxController {
     });
   }
 
-  Future<void> _synchronizeProfileProjections(List<EmployeeModel> items) async {
+  Future<void> _backfillProfileProjectionsOnce(
+    List<EmployeeModel> items,
+  ) async {
+    if (items.isEmpty || _profileBackfillStarted) return;
+    _profileBackfillStarted = true;
     try {
+      if (await _preferences.hasEmployeeProfilesSchemaVersion(
+        _employeeProfilesSchemaVersion,
+      )) {
+        return;
+      }
       await _repository.synchronizeProfileProjections(items);
+      await _preferences.markEmployeeProfilesSchemaVersion(
+        _employeeProfilesSchemaVersion,
+      );
     } catch (_) {
       // This is a non-blocking backfill. Employee management stays usable if
       // a projection sync is temporarily unavailable.
+      _profileBackfillStarted = false;
     }
   }
 
@@ -236,7 +246,6 @@ class EmployeeListController extends GetxController {
   @override
   void onClose() {
     _employeesSubscription?.cancel();
-    _overviewSubscription?.cancel();
     _searchDebounce?.cancel();
     searchController.dispose();
     super.onClose();

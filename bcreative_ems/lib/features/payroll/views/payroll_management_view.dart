@@ -2,6 +2,8 @@ import 'dart:ui' show PointerDeviceKind;
 
 import 'package:bcreative_ems/core/utils/responsive.dart';
 import 'package:bcreative_ems/core/widgets/app_loading.dart';
+import 'package:bcreative_ems/core/widgets/app_reset_button.dart';
+import 'package:bcreative_ems/core/widgets/app_surface.dart';
 import 'package:bcreative_ems/core/widgets/header_action_layout.dart';
 import 'package:bcreative_ems/core/widgets/page_intro.dart';
 import 'package:bcreative_ems/features/employees/models/employee_model.dart';
@@ -183,7 +185,7 @@ class _PayrollStatCard extends StatelessWidget {
   final Color background;
 
   @override
-  Widget build(BuildContext context) => _PayrollSurface(
+  Widget build(BuildContext context) => AppSurface.content(
     padding: const EdgeInsets.all(12),
     child: Row(
       children: [
@@ -244,7 +246,7 @@ class _PayrollRecordsLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final records = _PayrollSurface(
+      final records = AppSurface.content(
         padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -301,20 +303,17 @@ class _PayrollFilterBar extends StatelessWidget {
             values: controller.departments,
             onChanged: controller.setDepartmentFilter,
           ),
-          Tooltip(
-            message: 'Reset filters',
-            child: IconButton.outlined(
-              onPressed: controller.resetFilters,
-              icon: const Icon(Icons.filter_alt_off_outlined),
-            ),
-          ),
+          AppResetButton(onPressed: controller.resetFilters),
         ],
       ),
     );
     if (embedded) {
       return Padding(padding: const EdgeInsets.all(12), child: content);
     }
-    return _PayrollSurface(padding: const EdgeInsets.all(12), child: content);
+    return AppSurface.content(
+      padding: const EdgeInsets.all(12),
+      child: content,
+    );
   }
 }
 
@@ -517,7 +516,7 @@ class _PayrollDirectory extends StatelessWidget {
     );
     return embedded
         ? content
-        : _PayrollSurface(padding: EdgeInsets.zero, child: content);
+        : AppSurface.content(padding: EdgeInsets.zero, child: content);
   }
 }
 
@@ -848,7 +847,7 @@ class _PayrollDetails extends StatelessWidget {
   const _PayrollDetails({required this.controller});
   final PayrollController controller;
   @override
-  Widget build(BuildContext context) => _PayrollSurface(
+  Widget build(BuildContext context) => AppSurface.content(
     padding: EdgeInsets.zero,
     child: Obx(() {
       if (controller.isCreatePanelOpen.value) {
@@ -876,11 +875,7 @@ class _PayrollDetails extends StatelessWidget {
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
-                IconButton(
-                  onPressed: controller.resetFilters,
-                  tooltip: 'Reset filters',
-                  icon: const Icon(Icons.refresh_rounded, size: 19),
-                ),
+                AppResetButton(onPressed: controller.resetFilters),
               ],
             ),
           ),
@@ -1927,31 +1922,6 @@ class _DetailTotal extends StatelessWidget {
         ),
       ],
     ),
-  );
-}
-
-class _PayrollSurface extends StatelessWidget {
-  const _PayrollSurface({
-    required this.child,
-    this.padding = const EdgeInsets.all(16),
-  });
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: padding,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x0A294E85),
-          blurRadius: 18,
-          offset: Offset(0, 5),
-        ),
-      ],
-    ),
-    child: child,
   );
 }
 

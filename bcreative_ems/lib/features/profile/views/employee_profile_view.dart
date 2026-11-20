@@ -3,6 +3,10 @@ import 'package:bcreative_ems/core/widgets/app_loading.dart';
 import 'package:bcreative_ems/core/widgets/empty_state.dart';
 import 'package:bcreative_ems/core/widgets/page_intro.dart';
 import 'package:bcreative_ems/features/employees/models/employment_enums.dart';
+import 'package:bcreative_ems/features/profile/components/profile_fact.dart';
+import 'package:bcreative_ems/features/profile/components/profile_information_row.dart';
+import 'package:bcreative_ems/features/profile/components/profile_information_section.dart';
+import 'package:bcreative_ems/features/profile/components/profile_surface.dart';
 import 'package:bcreative_ems/features/profile/models/employee_profile_model.dart';
 import 'package:bcreative_ems/features/profile/viewmodels/employee_profile_controller.dart';
 import 'package:bcreative_ems/features/shell/views/app_shell.dart';
@@ -118,7 +122,7 @@ class _EmployeeProfileCard extends StatelessWidget {
   final EmployeeProfileModel profile;
 
   @override
-  Widget build(BuildContext context) => _ProfileSurface(
+  Widget build(BuildContext context) => ProfileSurface(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -148,31 +152,31 @@ class _EmployeeProfileCard extends StatelessWidget {
         const SizedBox(height: 20),
         const Divider(color: Color(0xFFE8EDF7), height: 1),
         const SizedBox(height: 18),
-        _ProfileFact(
+        ProfileFact(
           icon: Icons.badge_outlined,
           label: 'Employee ID',
           value: _text(profile.employeeCode),
         ),
         const SizedBox(height: 15),
-        _ProfileFact(
+        ProfileFact(
           icon: Icons.business_outlined,
           label: 'Department',
           value: _text(profile.department),
         ),
         const SizedBox(height: 15),
-        _ProfileFact(
+        ProfileFact(
           icon: Icons.calendar_month_outlined,
           label: 'Joining Date',
           value: _date(profile.joiningDate),
         ),
         const SizedBox(height: 15),
-        _ProfileFact(
+        ProfileFact(
           icon: Icons.work_outline_rounded,
           label: 'Employment Type',
           value: profile.employmentType?.label ?? 'Not set',
         ),
         const SizedBox(height: 15),
-        _ProfileFact(
+        ProfileFact(
           icon: Icons.payments_outlined,
           label:
               profile.compensationBasis == CompensationBasis.projectPercentage
@@ -266,57 +270,6 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-class _ProfileFact extends StatelessWidget {
-  const _ProfileFact({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Container(
-        height: 40,
-        width: 40,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF0F5FF),
-          borderRadius: BorderRadius.circular(11),
-        ),
-        child: Icon(icon, color: const Color(0xFF2168F3), size: 21),
-      ),
-      const SizedBox(width: 11),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF59709A),
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
-      ),
-    ],
-  );
-}
-
 class _ProfileInformation extends StatelessWidget {
   const _ProfileInformation({required this.profile});
 
@@ -324,20 +277,20 @@ class _ProfileInformation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final personal = _InformationSection(
+    final personal = ProfileInformationSection(
       icon: Icons.person_outline_rounded,
       title: 'Personal Information',
       child: Column(
         children: [
-          _InformationRow(
+          ProfileInformationRow(
             label: 'Date of Birth',
             value: _date(profile.dateOfBirth),
           ),
-          _InformationRow(
+          ProfileInformationRow(
             label: 'CNIC / Passport',
             value: _text(profile.cnicPassport),
           ),
-          _InformationRow(
+          ProfileInformationRow(
             label: 'Nationality',
             value: _text(profile.nationality),
             showDivider: false,
@@ -345,22 +298,22 @@ class _ProfileInformation extends StatelessWidget {
         ],
       ),
     );
-    final contact = _InformationSection(
+    final contact = ProfileInformationSection(
       icon: Icons.phone_in_talk_outlined,
       title: 'Contact Information',
       child: Column(
         children: [
-          _InformationRow(
+          ProfileInformationRow(
             label: 'Email',
             value: _text(profile.email),
             icon: Icons.mail_outline_rounded,
           ),
-          _InformationRow(
+          ProfileInformationRow(
             label: 'Phone',
             value: _text(profile.contactNumber),
             icon: Icons.phone_outlined,
           ),
-          _InformationRow(
+          ProfileInformationRow(
             label: 'Address',
             value: _text(profile.residentialAddress),
             icon: Icons.location_on_outlined,
@@ -402,24 +355,24 @@ class _EmploymentSection extends StatelessWidget {
   final EmployeeProfileModel profile;
 
   @override
-  Widget build(BuildContext context) => _InformationSection(
+  Widget build(BuildContext context) => ProfileInformationSection(
     icon: Icons.business_center_outlined,
     title: 'Employment Information',
     child: LayoutBuilder(
       builder: (context, constraints) {
         final left = Column(
           children: [
-            _InformationRow(
+            ProfileInformationRow(
               label: 'Job Title',
               value: _text(profile.jobTitle),
               icon: Icons.badge_outlined,
             ),
-            _InformationRow(
+            ProfileInformationRow(
               label: 'Department',
               value: _text(profile.department),
               icon: Icons.account_tree_outlined,
             ),
-            _InformationRow(
+            ProfileInformationRow(
               label: 'Bank',
               value: _text(profile.bankName),
               icon: Icons.account_balance_outlined,
@@ -429,17 +382,17 @@ class _EmploymentSection extends StatelessWidget {
         );
         final right = Column(
           children: [
-            _InformationRow(
+            ProfileInformationRow(
               label: 'Employment Type',
               value: profile.employmentType?.label ?? 'Not set',
               icon: Icons.layers_outlined,
             ),
-            _InformationRow(
+            ProfileInformationRow(
               label: 'Joining Date',
               value: _date(profile.joiningDate),
               icon: Icons.calendar_month_outlined,
             ),
-            _InformationRow(
+            ProfileInformationRow(
               label: 'Account No.',
               value: _text(profile.accountNumber),
               icon: Icons.credit_card_outlined,
@@ -476,129 +429,6 @@ class _EmploymentSection extends StatelessWidget {
         );
       },
     ),
-  );
-}
-
-class _InformationSection extends StatelessWidget {
-  const _InformationSection({
-    required this.icon,
-    required this.title,
-    required this.child,
-  });
-
-  final IconData icon;
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => _ProfileSurface(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              height: 39,
-              width: 39,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0F5FF),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: Icon(icon, color: const Color(0xFF2168F3), size: 22),
-            ),
-            const SizedBox(width: 11),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 13),
-        child,
-      ],
-    ),
-  );
-}
-
-class _InformationRow extends StatelessWidget {
-  const _InformationRow({
-    required this.label,
-    required this.value,
-    this.icon,
-    this.showDivider = true,
-  });
-
-  final String label;
-  final String value;
-  final IconData? icon;
-  final bool showDivider;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(vertical: 10),
-    decoration: BoxDecoration(
-      border: showDivider
-          ? const Border(bottom: BorderSide(color: Color(0xFFE8EDF7)))
-          : null,
-    ),
-    child: Row(
-      children: [
-        if (icon != null) ...[
-          Icon(icon, color: const Color(0xFF5F76A0), size: 20),
-          const SizedBox(width: 11),
-        ],
-        Expanded(
-          flex: icon == null ? 4 : 3,
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF4F6692),
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        Expanded(
-          flex: 5,
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _ProfileSurface extends StatelessWidget {
-  const _ProfileSurface({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(15),
-      border: Border.all(color: const Color(0xFFE5ECF8)),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x0A1B3D70),
-          blurRadius: 18,
-          offset: Offset(0, 6),
-        ),
-      ],
-    ),
-    child: child,
   );
 }
 

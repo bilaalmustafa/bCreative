@@ -1,6 +1,8 @@
 import 'package:bcreative_ems/app/routes/app_routes.dart';
 import 'package:bcreative_ems/core/utils/responsive.dart';
 import 'package:bcreative_ems/core/widgets/app_loading.dart';
+import 'package:bcreative_ems/core/widgets/app_reset_button.dart';
+import 'package:bcreative_ems/core/widgets/app_surface.dart';
 import 'package:bcreative_ems/core/widgets/header_action_layout.dart';
 import 'package:bcreative_ems/core/widgets/page_intro.dart';
 import 'package:bcreative_ems/features/attendance/models/attendance_record_model.dart';
@@ -155,7 +157,7 @@ class _TodayRecordCard extends StatelessWidget {
   Widget build(BuildContext context) => Obx(() {
     final record = controller.todayRecord.value;
     final isSaving = controller.isSaving.value;
-    return _EmployeeSurface(
+    return AppSurface.employeeContent(
       padding: EdgeInsets.zero,
       child: Column(
         children: [
@@ -387,7 +389,7 @@ class _RecentAttendanceCard extends StatelessWidget {
   final EmployeeAttendanceController controller;
 
   @override
-  Widget build(BuildContext context) => _EmployeeSurface(
+  Widget build(BuildContext context) => AppSurface.employeeContent(
     padding: EdgeInsets.zero,
     child: Column(
       children: [
@@ -436,7 +438,7 @@ class _MonthlyAttendanceContent extends StatelessWidget {
                 const SizedBox(height: 18),
                 _MonthlySummaryCards(controller: controller),
                 const SizedBox(height: 14),
-                _EmployeeSurface(
+                AppSurface.employeeContent(
                   padding: EdgeInsets.zero,
                   child: Column(
                     children: [
@@ -586,7 +588,7 @@ class _MonthStatCard extends StatelessWidget {
   final Color background;
 
   @override
-  Widget build(BuildContext context) => _EmployeeSurface(
+  Widget build(BuildContext context) => AppSurface.employeeContent(
     child: Row(
       children: [
         Container(
@@ -714,20 +716,17 @@ class _MonthlyFilters extends StatelessWidget {
               ),
             ),
           ),
-          Tooltip(
-            message: 'Reset filters',
-            child: IconButton.outlined(
-              onPressed: controller.resetFilters,
-              icon: const Icon(Icons.filter_alt_off_outlined),
-            ),
-          ),
+          AppResetButton(onPressed: controller.resetFilters),
         ],
       ),
     );
     if (embedded) {
       return Padding(padding: const EdgeInsets.all(12), child: content);
     }
-    return _EmployeeSurface(padding: const EdgeInsets.all(12), child: content);
+    return AppSurface.employeeContent(
+      padding: const EdgeInsets.all(12),
+      child: content,
+    );
   }
 }
 
@@ -837,7 +836,7 @@ class _MonthlyHistoryCard extends StatelessWidget {
     );
     return embedded
         ? content
-        : _EmployeeSurface(padding: EdgeInsets.zero, child: content);
+        : AppSurface.employeeContent(padding: EdgeInsets.zero, child: content);
   }
 }
 
@@ -1040,33 +1039,6 @@ class _EmployeeStatusChip extends StatelessWidget {
       ),
     );
   }
-}
-
-class _EmployeeSurface extends StatelessWidget {
-  const _EmployeeSurface({
-    required this.child,
-    this.padding = const EdgeInsets.all(18),
-  });
-
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: padding,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(13),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x0A294E85),
-          blurRadius: 18,
-          offset: Offset(0, 5),
-        ),
-      ],
-    ),
-    child: child,
-  );
 }
 
 Future<void> _pickDate(

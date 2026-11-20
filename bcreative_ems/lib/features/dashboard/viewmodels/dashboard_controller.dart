@@ -106,39 +106,29 @@ class DashboardController extends GetxController {
   }
 
   AttendanceSummary get attendanceSummary {
-    final records = _attendanceInRange(selectedRange.value);
-    final present = records
-        .where((record) => record.status == AttendanceStatus.present)
-        .length;
-    final late = records
-        .where((record) => record.status == AttendanceStatus.late)
-        .length;
-    final absent = records
-        .where((record) => record.status == AttendanceStatus.absent)
-        .length;
-    return AttendanceSummary(present: present, late: late, absent: absent);
+    final range = selectedRange.value;
+    return _attendanceForPeriod(
+      _day(range.start),
+      _latestAvailableDate(range.end),
+    );
   }
 
   List<AttendanceTrendPoint> get attendanceTrend {
-    final end = _day(selectedRange.value.end);
-    final denominator = eligibleEmployeeCount;
-    return List<AttendanceTrendPoint>.generate(7, (index) {
-      final date = end.subtract(Duration(days: 6 - index));
-      final checkedIn = attendanceRecords
-          .where(
-            (record) =>
-                _sameDay(record.date, date) &&
-                (record.status == AttendanceStatus.present ||
-                    record.status == AttendanceStatus.late) &&
-                record.checkIn != null,
-          )
-          .map((record) => record.employeeId)
-          .toSet()
-          .length;
+    final range = selectedRange.value;
+    final end = _latestAvailableDate(range.end);
+    final start = _day(range.start);
+    if (end.isBefore(start)) return const [];
+
+    final firstDate = end.subtract(const Duration(days: 6));
+    final visibleStart = firstDate.isBefore(start) ? start : firstDate;
+    final dayCount = end.difference(visibleStart).inDays + 1;
+    return List<AttendanceTrendPoint>.generate(dayCount, (index) {
+      final date = visibleStart.add(Duration(days: index));
+      final summary = _attendanceForDate(date);
       return AttendanceTrendPoint(
         date: date,
-        checkedIn: checkedIn,
-        totalEmployees: denominator,
+        checkedIn: summary.attended,
+        totalEmployees: summary.records,
       );
     });
   }
@@ -207,14 +197,73 @@ class DashboardController extends GetxController {
     );
   }
 
-  List<AttendanceRecordModel> _attendanceInRange(DateTimeRange range) =>
-      attendanceRecords
-          .where(
-            (record) =>
-                !record.date.isBefore(range.start) &&
-                !record.date.isAfter(range.end),
-          )
-          .toList(growable: false);
+  /// Builds the dashboard figures from the same employee/day status used by
+  /// Attendance Management. A missing record is an absence, so the pie does
+  /// not incorrectly report 100% attendance just because absent staff do not
+  /// have Firestore documents for that day.
+  AttendanceSummary _attendanceForPeriod(DateTime start, DateTime end) {
+    if (end.isBefore(start)) return AttendanceSummary.empty;
+
+    var present = 0;
+    var late = 0;
+    var absent = 0;
+    for (
+      var date = start;
+      !date.isAfter(end);
+      date = date.add(const Duration(days: 1))
+    ) {
+      final daily = _attendanceForDate(date);
+      present += daily.present;
+      late += daily.late;
+      absent += daily.absent;
+    }
+    return AttendanceSummary(present: present, late: late, absent: absent);
+  }
+
+  AttendanceSummary _attendanceForDate(DateTime date) {
+    final eligible = _eligibleEmployeesOn(date);
+    if (eligible.isEmpty) return AttendanceSummary.empty;
+
+    final eligibleIds = eligible.map((employee) => employee.id).toSet();
+    final recordsByEmployee = <String, AttendanceRecordModel>{
+      for (final record in attendanceRecords)
+        if (_sameDay(record.date, date) &&
+            eligibleIds.contains(record.employeeId))
+          record.employeeId: record,
+    };
+
+    var present = 0;
+    var late = 0;
+    var absent = 0;
+    for (final employee in eligible) {
+      switch (recordsByEmployee[employee.id]?.status) {
+        case AttendanceStatus.present:
+          present++;
+        case AttendanceStatus.late:
+          late++;
+        case AttendanceStatus.absent:
+        case null:
+          absent++;
+      }
+    }
+    return AttendanceSummary(present: present, late: late, absent: absent);
+  }
+
+  List<EmployeeModel> _eligibleEmployeesOn(DateTime date) {
+    final day = _day(date);
+    return activeEmployees
+        .where((employee) {
+          final joiningDate = employee.joiningDate;
+          return joiningDate == null || !_day(joiningDate).isAfter(day);
+        })
+        .toList(growable: false);
+  }
+
+  static DateTime _latestAvailableDate(DateTime rangeEnd) {
+    final today = _day(DateTime.now());
+    final end = _day(rangeEnd);
+    return end.isAfter(today) ? today : end;
+  }
 
   static DateTimeRange _currentMonthRange() {
     final now = DateTime.now();
@@ -276,13 +325,15 @@ class AttendanceSummary {
     required this.absent,
   });
 
+  static const empty = AttendanceSummary(present: 0, late: 0, absent: 0);
+
   final int present;
   final int late;
   final int absent;
 
   int get records => present + late + absent;
-  double get percentage =>
-      records == 0 ? 0 : ((present + late) / records) * 100;
+  int get attended => present + late;
+  double get percentage => records == 0 ? 0 : (attended / records) * 100;
 }
 
 class AttendanceTrendPoint {

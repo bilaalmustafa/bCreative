@@ -2,6 +2,8 @@ import 'dart:ui' show PointerDeviceKind;
 
 import 'package:bcreative_ems/core/utils/responsive.dart';
 import 'package:bcreative_ems/core/widgets/app_loading.dart';
+import 'package:bcreative_ems/core/widgets/app_reset_button.dart';
+import 'package:bcreative_ems/core/widgets/app_surface.dart';
 import 'package:bcreative_ems/core/widgets/header_action_layout.dart';
 import 'package:bcreative_ems/core/widgets/page_intro.dart';
 import 'package:bcreative_ems/features/projects/models/project_model.dart';
@@ -164,7 +166,7 @@ class _ProjectStatCard extends StatelessWidget {
   final Color background;
 
   @override
-  Widget build(BuildContext context) => _ProjectSurface(
+  Widget build(BuildContext context) => AppSurface.workspace(
     padding: const EdgeInsets.all(14),
     child: Row(
       children: [
@@ -227,7 +229,7 @@ class _ProjectsWorkspace extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final directory = _ProjectSurface(
+      final directory = AppSurface.workspace(
         padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -318,20 +320,17 @@ class _ProjectFilterBar extends StatelessWidget {
             labelFor: (value) => value.label,
             onChanged: controller.setPriorityFilter,
           ),
-          Tooltip(
-            message: 'Reset filters',
-            child: IconButton.outlined(
-              onPressed: controller.resetFilters,
-              icon: const Icon(Icons.refresh_rounded),
-            ),
-          ),
+          AppResetButton(onPressed: controller.resetFilters),
         ],
       ),
     );
     if (embedded) {
       return Padding(padding: const EdgeInsets.all(12), child: content);
     }
-    return _ProjectSurface(padding: const EdgeInsets.all(12), child: content);
+    return AppSurface.workspace(
+      padding: const EdgeInsets.all(12),
+      child: content,
+    );
   }
 }
 
@@ -480,7 +479,7 @@ class _ProjectDirectory extends StatelessWidget {
     );
     return embedded
         ? content
-        : _ProjectSurface(padding: EdgeInsets.zero, child: content);
+        : AppSurface.workspace(padding: EdgeInsets.zero, child: content);
   }
 }
 
@@ -866,7 +865,7 @@ class _ProjectSidePanel extends StatelessWidget {
   final ProjectController controller;
 
   @override
-  Widget build(BuildContext context) => _ProjectSurface(
+  Widget build(BuildContext context) => AppSurface.workspace(
     padding: EdgeInsets.zero,
     child: Obx(() {
       if (controller.isEditorOpen.value) {
@@ -1434,30 +1433,6 @@ class _DateButton extends StatelessWidget {
         ),
       ),
     ],
-  );
-}
-
-class _ProjectSurface extends StatelessWidget {
-  const _ProjectSurface({required this.child, required this.padding});
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: padding,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFFE8EEF8)),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x080F2D66),
-          blurRadius: 18,
-          offset: Offset(0, 8),
-        ),
-      ],
-    ),
-    child: child,
   );
 }
 

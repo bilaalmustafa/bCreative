@@ -2,6 +2,8 @@ import 'dart:ui' show PointerDeviceKind;
 
 import 'package:bcreative_ems/core/utils/responsive.dart';
 import 'package:bcreative_ems/core/widgets/app_loading.dart';
+import 'package:bcreative_ems/core/widgets/app_reset_button.dart';
+import 'package:bcreative_ems/core/widgets/app_surface.dart';
 import 'package:bcreative_ems/core/widgets/header_action_layout.dart';
 import 'package:bcreative_ems/core/widgets/page_intro.dart';
 import 'package:bcreative_ems/features/employees/models/employee_model.dart';
@@ -175,7 +177,7 @@ class _TaskStatCard extends StatelessWidget {
   final Color background;
 
   @override
-  Widget build(BuildContext context) => _TaskSurface(
+  Widget build(BuildContext context) => AppSurface.workspace(
     padding: const EdgeInsets.all(13),
     child: Row(
       children: [
@@ -237,7 +239,7 @@ class _TaskWorkspace extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final directory = _TaskSurface(
+      final directory = AppSurface.workspace(
         padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -344,20 +346,17 @@ class _TaskFilterBar extends StatelessWidget {
             selectedColor: const Color(0xFFFFE7EA),
             labelStyle: const TextStyle(fontSize: 11),
           ),
-          Tooltip(
-            message: 'Reset filters',
-            child: IconButton.outlined(
-              onPressed: controller.resetFilters,
-              icon: const Icon(Icons.refresh_rounded),
-            ),
-          ),
+          AppResetButton(onPressed: controller.resetFilters),
         ],
       ),
     );
     if (embedded) {
       return Padding(padding: const EdgeInsets.all(12), child: content);
     }
-    return _TaskSurface(padding: const EdgeInsets.all(12), child: content);
+    return AppSurface.workspace(
+      padding: const EdgeInsets.all(12),
+      child: content,
+    );
   }
 }
 
@@ -490,7 +489,7 @@ class _TaskDirectory extends StatelessWidget {
     );
     return embedded
         ? content
-        : _TaskSurface(padding: EdgeInsets.zero, child: content);
+        : AppSurface.workspace(padding: EdgeInsets.zero, child: content);
   }
 }
 
@@ -845,7 +844,7 @@ class _TaskSidePanel extends StatelessWidget {
   const _TaskSidePanel({required this.controller});
   final TaskController controller;
   @override
-  Widget build(BuildContext context) => _TaskSurface(
+  Widget build(BuildContext context) => AppSurface.workspace(
     padding: EdgeInsets.zero,
     child: Obx(() {
       if (controller.isEditorOpen.value) {
@@ -1322,7 +1321,7 @@ class _EmployeeTaskContent extends StatelessWidget {
               const SizedBox(height: 14),
               Obx(() {
                 if (controller.tasks.isEmpty) {
-                  return const _TaskSurface(
+                  return const AppSurface.workspace(
                     padding: EdgeInsets.all(44),
                     child: Center(
                       child: Text(
@@ -1417,7 +1416,7 @@ class _MiniTaskStat extends StatelessWidget {
   final String value;
   final Color color;
   @override
-  Widget build(BuildContext context) => _TaskSurface(
+  Widget build(BuildContext context) => AppSurface.workspace(
     padding: const EdgeInsets.all(14),
     child: Row(
       children: [
@@ -1469,7 +1468,7 @@ class _EmployeeTaskCard extends StatelessWidget {
   final TaskController controller;
   final EmployeeTaskModel task;
   @override
-  Widget build(BuildContext context) => _TaskSurface(
+  Widget build(BuildContext context) => AppSurface.workspace(
     padding: const EdgeInsets.all(17),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1585,29 +1584,6 @@ class _EmployeeTaskCard extends StatelessWidget {
         ),
       ],
     ),
-  );
-}
-
-class _TaskSurface extends StatelessWidget {
-  const _TaskSurface({required this.child, required this.padding});
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: padding,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFFE8EEF8)),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x080F2D66),
-          blurRadius: 18,
-          offset: Offset(0, 8),
-        ),
-      ],
-    ),
-    child: child,
   );
 }
 

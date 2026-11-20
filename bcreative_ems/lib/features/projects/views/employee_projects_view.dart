@@ -3,6 +3,8 @@ import 'dart:ui' show PointerDeviceKind;
 import 'package:bcreative_ems/app/routes/app_routes.dart';
 import 'package:bcreative_ems/core/utils/responsive.dart';
 import 'package:bcreative_ems/core/widgets/app_loading.dart';
+import 'package:bcreative_ems/core/widgets/app_reset_button.dart';
+import 'package:bcreative_ems/core/widgets/app_surface.dart';
 import 'package:bcreative_ems/core/widgets/page_intro.dart';
 import 'package:bcreative_ems/features/projects/models/project_model.dart';
 import 'package:bcreative_ems/features/projects/viewmodels/employee_projects_controller.dart';
@@ -132,7 +134,7 @@ class _EmployeeStat extends StatelessWidget {
   final Color background;
 
   @override
-  Widget build(BuildContext context) => _EmployeeSurface(
+  Widget build(BuildContext context) => AppSurface.workspace(
     padding: const EdgeInsets.all(14),
     child: Row(
       children: [
@@ -193,7 +195,7 @@ class _EmployeeProjectWorkspace extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final directory = _EmployeeSurface(
+      final directory = AppSurface.workspace(
         padding: EdgeInsets.zero,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -237,7 +239,8 @@ class _EmployeeFilter extends StatelessWidget {
             width: 270,
             height: 40,
             child: TextField(
-              onChanged: (value) => controller.searchQuery.value = value,
+              controller: controller.searchController,
+              onChanged: controller.setSearchQuery,
               style: const TextStyle(fontSize: 12),
               decoration: InputDecoration(
                 hintText: 'Search projects, client, department...',
@@ -287,20 +290,17 @@ class _EmployeeFilter extends StatelessWidget {
               ),
             ),
           ),
-          Tooltip(
-            message: 'Reset filters',
-            child: IconButton.outlined(
-              onPressed: controller.resetFilters,
-              icon: const Icon(Icons.refresh_rounded),
-            ),
-          ),
+          AppResetButton(onPressed: controller.resetFilters),
         ],
       ),
     );
     if (embedded) {
       return Padding(padding: const EdgeInsets.all(12), child: content);
     }
-    return _EmployeeSurface(padding: const EdgeInsets.all(12), child: content);
+    return AppSurface.workspace(
+      padding: const EdgeInsets.all(12),
+      child: content,
+    );
   }
 }
 
@@ -362,7 +362,7 @@ class _EmployeeDirectory extends StatelessWidget {
     );
     return embedded
         ? content
-        : _EmployeeSurface(padding: EdgeInsets.zero, child: content);
+        : AppSurface.workspace(padding: EdgeInsets.zero, child: content);
   }
 }
 
@@ -604,7 +604,7 @@ class _EmployeeProjectDetails extends StatelessWidget {
   final EmployeeProjectsController controller;
 
   @override
-  Widget build(BuildContext context) => _EmployeeSurface(
+  Widget build(BuildContext context) => AppSurface.workspace(
     padding: EdgeInsets.zero,
     child: Obx(() {
       final project = controller.selectedProject;
@@ -946,27 +946,4 @@ String _employeeInitials(String name) {
       .where((word) => word.isNotEmpty);
   final initials = words.take(2).map((word) => word[0].toUpperCase()).join();
   return initials.isEmpty ? '?' : initials;
-}
-
-class _EmployeeSurface extends StatelessWidget {
-  const _EmployeeSurface({required this.child, required this.padding});
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: padding,
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFFE8EEF8)),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x080F2D66),
-          blurRadius: 18,
-          offset: Offset(0, 8),
-        ),
-      ],
-    ),
-    child: child,
-  );
 }

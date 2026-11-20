@@ -5,6 +5,7 @@ import 'package:bcreative_ems/features/auth/viewmodels/auth_controller.dart';
 import 'package:bcreative_ems/features/projects/models/project_model.dart';
 import 'package:bcreative_ems/features/projects/repositories/project_repository.dart';
 import 'package:bcreative_ems/features/tasks/models/employee_task_model.dart';
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
 class EmployeeProjectsController extends GetxController {
@@ -17,6 +18,7 @@ class EmployeeProjectsController extends GetxController {
   final tasks = <EmployeeTaskModel>[].obs;
   final isLoading = true.obs;
   final searchQuery = ''.obs;
+  final searchController = TextEditingController();
   final statusFilter = Rxn<ProjectStatus>();
   final selectedProjectId = RxnString();
 
@@ -127,7 +129,10 @@ class EmployeeProjectsController extends GetxController {
   void selectProject(ProjectModel project) =>
       selectedProjectId.value = project.id;
 
+  void setSearchQuery(String value) => searchQuery.value = value;
+
   void resetFilters() {
+    searchController.clear();
     searchQuery.value = '';
     statusFilter.value = null;
   }
@@ -136,6 +141,7 @@ class EmployeeProjectsController extends GetxController {
   void onClose() {
     _projectsSubscription?.cancel();
     _tasksSubscription?.cancel();
+    searchController.dispose();
     super.onClose();
   }
 }

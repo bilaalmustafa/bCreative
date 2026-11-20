@@ -11,18 +11,6 @@ import 'package:file_picker/file_picker.dart';
 
 import '../../../firebase_options.dart';
 
-class EmployeePage {
-  const EmployeePage({
-    required this.items,
-    this.lastDocument,
-    this.hasMore = false,
-  });
-
-  final List<EmployeeModel> items;
-  final DocumentSnapshot<Map<String, dynamic>>? lastDocument;
-  final bool hasMore;
-}
-
 class EmployeeOverviewStats {
   const EmployeeOverviewStats({
     required this.total,
@@ -35,6 +23,33 @@ class EmployeeOverviewStats {
   final int active;
   final int onLeave;
   final int inactive;
+
+  factory EmployeeOverviewStats.fromEmployees(
+    Iterable<EmployeeModel> employees,
+  ) {
+    var total = 0;
+    var active = 0;
+    var onLeave = 0;
+    var inactive = 0;
+    for (final employee in employees) {
+      total++;
+      switch (employee.employmentStatus) {
+        case EmploymentStatus.active:
+          active++;
+        case EmploymentStatus.onLeave:
+          onLeave++;
+        case EmploymentStatus.inactive:
+        case EmploymentStatus.terminated:
+          inactive++;
+      }
+    }
+    return EmployeeOverviewStats(
+      total: total,
+      active: active,
+      onLeave: onLeave,
+      inactive: inactive,
+    );
+  }
 }
 
 class EmployeeRepository {
@@ -45,8 +60,6 @@ class EmployeeRepository {
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
        _auth = auth ?? FirebaseAuth.instance,
        _storage = storage ?? FirebaseStorage.instance;
-
-  static const int pageSize = 20;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
@@ -93,68 +106,6 @@ class EmployeeRepository {
       }
       await batch.commit();
     }
-  }
-
-  Stream<EmployeeOverviewStats> watchOverview() =>
-      _employees.snapshots().map((snapshot) {
-        final employees = snapshot.docs
-            .map(EmployeeModel.fromFirestore)
-            .toList(growable: false);
-        return EmployeeOverviewStats(
-          total: employees.length,
-          active: employees
-              .where(
-                (employee) =>
-                    employee.employmentStatus == EmploymentStatus.active,
-              )
-              .length,
-          onLeave: employees
-              .where(
-                (employee) =>
-                    employee.employmentStatus == EmploymentStatus.onLeave,
-              )
-              .length,
-          inactive: employees
-              .where(
-                (employee) =>
-                    employee.employmentStatus == EmploymentStatus.inactive ||
-                    employee.employmentStatus == EmploymentStatus.terminated,
-              )
-              .length,
-        );
-      });
-
-  Future<EmployeePage> fetchPage({
-    EmploymentStatus? statusFilter,
-    String searchQuery = '',
-    DocumentSnapshot<Map<String, dynamic>>? startAfter,
-  }) async {
-    Query<Map<String, dynamic>> query = _employees.orderBy('fullNameLower');
-
-    if (statusFilter != null) {
-      query = query.where('employmentStatus', isEqualTo: statusFilter.value);
-    }
-
-    final term = searchQuery.trim().toLowerCase();
-    if (term.isNotEmpty) {
-      query = query
-          .where('fullNameLower', isGreaterThanOrEqualTo: term)
-          .where('fullNameLower', isLessThan: '$term\uf8ff');
-    }
-
-    if (startAfter != null) query = query.startAfterDocument(startAfter);
-
-    final snapshot = await query.limit(pageSize + 1).get();
-    final hasMore = snapshot.docs.length > pageSize;
-    final pageDocuments = hasMore
-        ? snapshot.docs.sublist(0, pageSize)
-        : snapshot.docs;
-
-    return EmployeePage(
-      items: pageDocuments.map(EmployeeModel.fromFirestore).toList(),
-      lastDocument: pageDocuments.isEmpty ? null : pageDocuments.last,
-      hasMore: hasMore,
-    );
   }
 
   Future<EmployeeModel?> getById(String id) async {

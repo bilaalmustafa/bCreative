@@ -1,6 +1,11 @@
 import 'package:bcreative_ems/core/utils/responsive.dart';
 import 'package:bcreative_ems/core/widgets/app_loading.dart';
 import 'package:bcreative_ems/core/widgets/page_intro.dart';
+import 'package:bcreative_ems/features/employees/components/employee_date_field.dart';
+import 'package:bcreative_ems/features/employees/components/employee_field_label.dart';
+import 'package:bcreative_ems/features/employees/components/employee_labeled_input.dart';
+import 'package:bcreative_ems/features/employees/components/employee_surface.dart';
+import 'package:bcreative_ems/features/employees/components/employee_two_fields.dart';
 import 'package:bcreative_ems/features/employees/models/employee_model.dart';
 import 'package:bcreative_ems/features/employees/models/employment_enums.dart';
 import 'package:bcreative_ems/features/employees/viewmodels/employee_form_controller.dart';
@@ -232,7 +237,7 @@ class _EmployeeStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _EmployeeSurface(
+    return EmployeeSurface(
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
@@ -300,7 +305,7 @@ class _EmployeeDirectory extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _EmployeeSurface(
+    return EmployeeSurface(
       padding: EdgeInsets.zero,
       child: Column(
         children: [
@@ -981,7 +986,7 @@ class _EmployeeComposerPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _EmployeeSurface(
+    return EmployeeSurface(
       padding: EdgeInsets.zero,
       child: Obx(() {
         final readOnly = listController.isViewingEmployee;
@@ -1187,7 +1192,7 @@ class _BasicTab extends StatelessWidget {
           }),
         ),
         const SizedBox(height: 17),
-        const _FieldLabel('Full Name *'),
+        const EmployeeFieldLabel('Full Name *'),
         TextFormField(
           controller: formController.fullNameController,
           readOnly: readOnly,
@@ -1195,7 +1200,7 @@ class _BasicTab extends StatelessWidget {
           validator: formController.validateFullName,
         ),
         const SizedBox(height: 13),
-        const _FieldLabel('Email Address *'),
+        const EmployeeFieldLabel('Email Address *'),
         TextFormField(
           controller: formController.emailController,
           readOnly: readOnly,
@@ -1204,15 +1209,15 @@ class _BasicTab extends StatelessWidget {
           validator: formController.validateEmail,
         ),
         const SizedBox(height: 13),
-        _TwoFields(
-          first: _LabeledInput(
+        EmployeeTwoFields(
+          first: EmployeeLabeledInput(
             label: 'Department *',
             controller: formController.departmentController,
             hint: 'Select or enter department',
             validator: formController.validateDepartment,
             readOnly: readOnly,
           ),
-          second: _LabeledInput(
+          second: EmployeeLabeledInput(
             label: 'Position *',
             controller: formController.jobTitleController,
             hint: 'Enter position',
@@ -1221,7 +1226,7 @@ class _BasicTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 13),
-        const _FieldLabel('Contact Number *'),
+        const EmployeeFieldLabel('Contact Number *'),
         TextFormField(
           controller: formController.contactController,
           readOnly: readOnly,
@@ -1247,7 +1252,7 @@ class _PersonalTab extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (showTemporaryPassword) ...[
-          const _FieldLabel('Temporary Password *'),
+          const EmployeeFieldLabel('Temporary Password *'),
           TextFormField(
             controller: formController.temporaryPasswordController,
             obscureText: formController.obscureTemporaryPassword.value,
@@ -1281,14 +1286,14 @@ class _PersonalTab extends StatelessWidget {
           ),
           const SizedBox(height: 13),
         ],
-        _TwoFields(
-          first: _LabeledInput(
+        EmployeeTwoFields(
+          first: EmployeeLabeledInput(
             label: 'Nationality',
             controller: formController.nationalityController,
             hint: 'e.g. Saudi',
             readOnly: readOnly,
           ),
-          second: _DateField(
+          second: EmployeeDateField(
             label: 'Date of Birth',
             value: formController.dateOfBirth,
             onTap: readOnly
@@ -1297,7 +1302,7 @@ class _PersonalTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 13),
-        const _FieldLabel('CNIC / Passport Number'),
+        const EmployeeFieldLabel('CNIC / Passport Number'),
         TextFormField(
           controller: formController.cnicController,
           readOnly: readOnly,
@@ -1306,7 +1311,7 @@ class _PersonalTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 13),
-        const _FieldLabel('Residential Address'),
+        const EmployeeFieldLabel('Residential Address'),
         TextFormField(
           controller: formController.addressController,
           readOnly: readOnly,
@@ -1330,7 +1335,7 @@ class _EmploymentTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _FieldLabel('Employment Type *'),
+        const EmployeeFieldLabel('Employment Type *'),
         Obx(
           () => DropdownButtonFormField<EmploymentType>(
             key: ValueKey(formController.employmentType.value),
@@ -1352,12 +1357,12 @@ class _EmploymentTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 13),
-        _TwoFields(
+        EmployeeTwoFields(
           first: _StatusPicker(
             formController: formController,
             readOnly: readOnly,
           ),
-          second: _DateField(
+          second: EmployeeDateField(
             label: 'Joining Date',
             value: formController.joiningDate,
             onTap: readOnly
@@ -1366,7 +1371,7 @@ class _EmploymentTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 13),
-        const _FieldLabel('Payment Basis *'),
+        const EmployeeFieldLabel('Payment Basis *'),
         Obx(
           () => DropdownButtonFormField<CompensationBasis>(
             key: ValueKey(formController.compensationBasis.value),
@@ -1415,28 +1420,28 @@ class _EmploymentTab extends StatelessWidget {
           );
         }),
         const SizedBox(height: 13),
-        _LabeledInput(
+        EmployeeLabeledInput(
           label: 'Bank Name',
           controller: formController.bankNameController,
           hint: 'Enter bank name',
           readOnly: readOnly,
         ),
         const SizedBox(height: 13),
-        _LabeledInput(
+        EmployeeLabeledInput(
           label: 'Account Title',
           controller: formController.accountTitleController,
           hint: 'Enter account title',
           readOnly: readOnly,
         ),
         const SizedBox(height: 13),
-        _TwoFields(
-          first: _LabeledInput(
+        EmployeeTwoFields(
+          first: EmployeeLabeledInput(
             label: 'Account Number',
             controller: formController.accountNumberController,
             hint: 'Enter account number',
             readOnly: readOnly,
           ),
-          second: _LabeledInput(
+          second: EmployeeLabeledInput(
             label: 'IBAN',
             controller: formController.ibanController,
             hint: 'Enter IBAN',
@@ -1459,7 +1464,7 @@ class _StatusPicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _FieldLabel('Employment Status *'),
+        const EmployeeFieldLabel('Employment Status *'),
         Obx(
           () => DropdownButtonFormField<EmploymentStatus>(
             key: ValueKey(formController.employmentStatus.value),
@@ -1581,149 +1586,6 @@ class _ComposerFooter extends StatelessWidget {
           ],
         );
       }),
-    );
-  }
-}
-
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 6),
-    child: Text(
-      label,
-      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-    ),
-  );
-}
-
-class _LabeledInput extends StatelessWidget {
-  const _LabeledInput({
-    required this.label,
-    required this.controller,
-    required this.hint,
-    this.readOnly = false,
-    this.validator,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final String hint;
-  final bool readOnly;
-  final String? Function(String?)? validator;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      _FieldLabel(label),
-      TextFormField(
-        controller: controller,
-        readOnly: readOnly,
-        decoration: InputDecoration(hintText: hint),
-        validator: validator,
-      ),
-    ],
-  );
-}
-
-class _DateField extends StatelessWidget {
-  const _DateField({required this.label, required this.value, this.onTap});
-
-  final String label;
-  final Rxn<DateTime> value;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      _FieldLabel(label),
-      Obx(
-        () => InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
-          child: InputDecorator(
-            decoration: InputDecoration(
-              suffixIcon: Icon(
-                Icons.calendar_month_outlined,
-                size: 18,
-                color: onTap == null ? const Color(0xFF92A2BB) : null,
-              ),
-            ),
-            child: Text(
-              value.value == null
-                  ? 'Select date'
-                  : DateFormat('dd MMM y').format(value.value!),
-              style: TextStyle(
-                fontSize: 12,
-                color: value.value == null
-                    ? const Color(0xFF8B9AB5)
-                    : const Color(0xFF1A2D50),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ],
-  );
-}
-
-class _TwoFields extends StatelessWidget {
-  const _TwoFields({required this.first, required this.second});
-
-  final Widget first;
-  final Widget second;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 330) {
-          return Column(children: [first, const SizedBox(height: 13), second]);
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: first),
-            const SizedBox(width: 10),
-            Expanded(child: second),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _EmployeeSurface extends StatelessWidget {
-  const _EmployeeSurface({
-    required this.child,
-    this.padding = const EdgeInsets.all(16),
-  });
-
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE8EEF7)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x09183663),
-            blurRadius: 18,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: child,
     );
   }
 }
